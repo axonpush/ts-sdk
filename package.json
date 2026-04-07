@@ -1,0 +1,49 @@
+{
+  "name": "@axonpush/sdk",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "module": "./dist/index.js",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./integrations/*": {
+      "import": "./dist/integrations/*.js",
+      "types": "./dist/integrations/*.d.ts"
+    }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "generate": "openapi-typescript https://api.axonpush.xyz/swagger/json -o ./src/schema.d.ts",
+    "generate:local": "openapi-typescript http://localhost:3000/swagger/json -o ./src/schema.d.ts",
+    "build": "bun build ./src/index.ts --outdir ./dist --target node --format esm && tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
+    "lint": "biome check src/ index.ts",
+    "lint:fix": "biome check --write src/ index.ts",
+    "format": "biome format --write src/ index.ts"
+  },
+  "dependencies": {
+    "consola": "^3.4.2",
+    "openapi-fetch": "^0.17.0"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.4.10",
+    "@types/bun": "latest",
+    "@types/node": "^25.5.2",
+    "openapi-typescript": "^7.13.0"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "peerDependenciesMeta": {
+    "typescript": {
+      "optional": true
+    }
+  },
+  "optionalDependencies": {
+    "socket.io-client": "^4"
+  }
+}
