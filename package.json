@@ -1,6 +1,6 @@
 {
   "name": "@axonpush/sdk",
-  "version": "0.1.0",
+  "version": "0.0.2",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -23,7 +23,10 @@
     "typecheck": "tsc --noEmit",
     "lint": "biome check src/ index.ts",
     "lint:fix": "biome check --write src/ index.ts",
-    "format": "biome format --write src/ index.ts"
+    "format": "biome format --write src/ index.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:ui": "vitest --ui"
   },
   "dependencies": {
     "consola": "^3.4.2",
@@ -33,13 +36,37 @@
     "@biomejs/biome": "^2.4.10",
     "@types/bun": "latest",
     "@types/node": "^25.5.2",
-    "openapi-typescript": "^7.13.0"
+    "@vitest/ui": "^4.1.4",
+    "msw": "^2.13.2",
+    "openapi-typescript": "^7.13.0",
+    "vitest": "^4.1.4",
+    "winston-transport": "^4.7.0"
   },
   "peerDependencies": {
-    "typescript": "^5"
+    "@opentelemetry/api": "^1.7.0",
+    "@opentelemetry/sdk-trace-base": "^1.18.0",
+    "pino": "^9.0.0",
+    "typescript": "^5",
+    "winston": "^3.11.0",
+    "winston-transport": "^4.7.0"
   },
   "peerDependenciesMeta": {
+    "@opentelemetry/api": {
+      "optional": true
+    },
+    "@opentelemetry/sdk-trace-base": {
+      "optional": true
+    },
+    "pino": {
+      "optional": true
+    },
     "typescript": {
+      "optional": true
+    },
+    "winston": {
+      "optional": true
+    },
+    "winston-transport": {
       "optional": true
     }
   },
