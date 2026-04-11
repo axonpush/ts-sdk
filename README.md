@@ -313,9 +313,116 @@ const callbacks = axonPushADKCallbacks(config);
 
 Events: `agent.start/end`, `llm.start/end`, `tool.{name}.start/end`
 
-## Logging
+## Logging & Observability
 
-Uses [consola](https://github.com/unjs/consola) for logging. Configure log level:
+Ship logs and traces from your existing Node.js observability stack to AxonPush. Four integrations are shipped: **Pino**, **Winston**, `console` capture, and an **OpenTelemetry** `SpanExporter`. All four emit OpenTelemetry-shaped payloads, so the events line up with anything else you're already sending to an OTel-compatible backend.
+
+> **Non-blocking by default (v0.0.2+).** Each integration submits publishes onto a bounded in-memory queue and drains them from a single background task, so `log.info(...)` stays O(microseconds) on the caller's path — no HTTP round-trip on the hot path. The queue is bounded (default 1000 records); overflow drops the oldest with a rate-limited warning. Call `.flush(timeoutMs?)` or use `flushAfterInvocation(handler, fn)` at known checkpoints (end of a Lambda invocation, end of a test) to guarantee delivery. Pass `mode: "sync"` on any integration if you need blocking publishes. A `beforeExit` / `SIGTERM` / `SIGINT` hook drains all live publishers automatically at process shutdown.
+
+### Pino
+
+```ts
+import pino from "pino";
+import { AxonPush } from "@axonpush/sdk";
+import { createAxonPushPinoStream } from "@axonpush/sdk/integrations/pino";
+
+const client = new AxonPush({ apiKey: "ak_..." });
+const stream = createAxonPushPinoStream({
+  client,
+  channelId: 1,
+  serviceName: "my-api",
+});
+const log = pino({ level: "info" }, stream);
+log.info({ user: "alice" }, "login succeeded");
+```
+
+### Winston
+
+```ts
+import winston from "winston";
+import { AxonPush } from "@axonpush/sdk";
+import { createAxonPushWinstonTransport } from "@axonpush/sdk/integrations/winston";
+
+const client = new AxonPush({ apiKey: "ak_..." });
+const log = winston.createLogger({
+  transports: [
+    new winston.transports.Console(),
+    await createAxonPushWinstonTransport({ client, channelId: 1, serviceName: "my-api" }),
+  ],
+});
+log.error({ message: "connection refused", user: "alice" });
+```
+
+### `console` capture
+
+For AI agents that emit free-form output via `console.log`:
+
+```ts
+import { AxonPush } from "@axonpush/sdk";
+import { setupConsoleCapture } from "@axonpush/sdk/integrations/console";
+
+const client = new AxonPush({ apiKey: "ak_..." });
+const handle = setupConsoleCapture({ client, channelId: 1, agentId: "my-agent" });
+
+console.log("agent starting");  // captured AND still written to the terminal
+handle.unpatch();  // restore the original console methods
+```
+
+### OpenTelemetry
+
+```ts
+import { NodeTracerProvider } from "@opentelemetry/sdk-trace-node";
+import { SimpleSpanProcessor } from "@opentelemetry/sdk-trace-base";
+import { AxonPush } from "@axonpush/sdk";
+import { AxonPushSpanExporter } from "@axonpush/sdk/integrations/otel";
+
+const provider = new NodeTracerProvider();
+provider.addSpanProcessor(
+  new SimpleSpanProcessor(
+    new AxonPushSpanExporter({
+      client: new AxonPush({ apiKey: "ak_..." }),
+      channelId: 1,
+      serviceName: "my-api",
+    }),
+  ),
+);
+provider.register();
+```
+
+### AWS Lambda / Google Cloud Functions / Azure Functions
+
+Serverless containers are **frozen between invocations**, so the background worker doesn't get a chance to drain while the process is paused. To guarantee delivery, call `.flush()` at the end of each invocation. The `flushAfterInvocation` helper wraps your handler and flushes in a `finally:` block:
+
+```ts
+import { AxonPush } from "@axonpush/sdk";
+import {
+  createAxonPushPinoStream,
+  // OR: createAxonPushWinstonTransport from ".../integrations/winston"
+} from "@axonpush/sdk/integrations/pino";
+import { flushAfterInvocation } from "@axonpush/sdk/integrations/pino";
+
+const client = new AxonPush({ apiKey: process.env.AXONPUSH_API_KEY! });
+const stream = createAxonPushPinoStream({
+  client,
+  channelId: Number(process.env.AXONPUSH_CHANNEL_ID_LOGGING),
+  serviceName: "my-lambda",
+});
+
+export const handler = flushAfterInvocation(stream, async (event, _context) => {
+  // your handler code
+  return { statusCode: 200 };
+});
+```
+
+Pass `[handler1, handler2, ...]` to flush multiple integrations in one wrap. The integrations auto-detect Lambda / GCF / Azure Functions at construction time and log a one-time reminder to use `flushAfterInvocation`.
+
+### Graceful shutdown
+
+All four integrations expose `.flush(timeoutMs?)` to drain pending records and `.close()` (or `.shutdown()` on the OTel exporter) to stop the background task. A module-level `beforeExit` / `SIGTERM` / `SIGINT` hook also closes every live publisher automatically on normal process exit — you don't need to call `.close()` explicitly in long-running servers.
+
+### Internal logger
+
+The SDK uses [consola](https://github.com/unjs/consola) for diagnostics. Configure log level:
 
 ```ts
 import { logger } from "@axonpush/sdk";
