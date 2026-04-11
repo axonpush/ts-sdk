@@ -607,6 +607,9 @@ export interface components {
         | "agent.error"
         | "agent.handoff"
         | "agent.llm.token"
+        | "agent.log"
+        | "app.log"
+        | "app.span"
         | "custom";
       metadata: Record<string, never>;
       channel: components["schemas"]["Channel"];
@@ -784,6 +787,9 @@ export interface components {
         | "agent.error"
         | "agent.handoff"
         | "agent.llm.token"
+        | "agent.log"
+        | "app.log"
+        | "app.span"
         | "custom";
       metadata?: Record<string, never>;
     };
