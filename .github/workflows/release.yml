@@ -63,7 +63,7 @@ jobs:
           registry-url: "https://registry.npmjs.org"
 
       - name: Upgrade npm for trusted publishing support
-        run: npm install -g npm@latest
+        run: sudo npm install -g npm@latest
 
       - run: bun install --frozen-lockfile
 
