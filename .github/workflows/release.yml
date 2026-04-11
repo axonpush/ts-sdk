@@ -62,22 +62,17 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
-
-      - name: Upgrade npm for trusted publishing support
-        run: sudo npm install -g npm@latest
+          registry-url: "https://registry.npmjs.org"
 
       - run: bun install --frozen-lockfile
 
       - name: Build package
         run: bun run build
 
-      - name: Publish to npm with trusted publisher + provenance
-        run: |
-          echo "npm version: $(npm --version)"
-          npm config set registry https://registry.npmjs.org/
-          npm publish --access public --provenance
+      - name: Publish to npm
+        run: npm publish --access public
         env:
-          NPM_CONFIG_USERCONFIG: ""
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
