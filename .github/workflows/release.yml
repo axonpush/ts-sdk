@@ -72,6 +72,17 @@ jobs:
       - name: Build package
         run: bun run build
 
+      - name: Debug OIDC claim fields (for trusted-publisher troubleshooting)
+        run: |
+          echo "GITHUB_REPOSITORY=$GITHUB_REPOSITORY"
+          echo "GITHUB_REPOSITORY_OWNER=$GITHUB_REPOSITORY_OWNER"
+          echo "GITHUB_WORKFLOW=$GITHUB_WORKFLOW"
+          echo "GITHUB_WORKFLOW_REF=$GITHUB_WORKFLOW_REF"
+          echo "GITHUB_REF=$GITHUB_REF"
+          echo "GITHUB_SHA=$GITHUB_SHA"
+          echo "GITHUB_EVENT_NAME=$GITHUB_EVENT_NAME"
+          echo "GITHUB_ACTOR=$GITHUB_ACTOR"
+
       - name: Publish to npm with trusted publisher + provenance
         run: npm publish --access public --provenance
 
