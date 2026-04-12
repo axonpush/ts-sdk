@@ -15,6 +15,10 @@
       "types": "./dist/integrations/*.d.ts"
     }
   },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/axonpush/ts-sdk"
+  },
   "files": ["dist"],
   "scripts": {
     "generate": "openapi-typescript https://api.axonpush.xyz/swagger/json -o ./src/schema.d.ts",
