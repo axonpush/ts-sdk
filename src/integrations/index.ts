@@ -29,6 +29,12 @@ export {
   createAxonPushPinoStream,
   type PinoStreamConfig,
 } from "./pino.js";
+export {
+  buildDsn as buildSentryDsn,
+  installSentry,
+  type InstallSentryOptions,
+  type SentryLike,
+} from "./sentry.js";
 export { axonPushMiddleware } from "./vercel-ai.js";
 export {
   createAxonPushWinstonTransport,

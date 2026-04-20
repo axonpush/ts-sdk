@@ -8,6 +8,7 @@ export interface TransportOptions {
   tenantId: string;
   baseUrl: string;
   failOpen: boolean;
+  environment?: string;
 }
 
 function createAuthMiddleware(opts: TransportOptions): Middleware {
@@ -15,6 +16,9 @@ function createAuthMiddleware(opts: TransportOptions): Middleware {
     async onRequest({ request }) {
       request.headers.set("X-API-Key", opts.apiKey);
       request.headers.set("x-tenant-id", opts.tenantId);
+      if (opts.environment) {
+        request.headers.set("X-Axonpush-Environment", opts.environment);
+      }
       request.headers.set("Content-Type", "application/json");
       return request;
     },
