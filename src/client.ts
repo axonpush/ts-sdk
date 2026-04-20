@@ -1,3 +1,4 @@
+import { logger } from "./logger.js";
 import { WebSocketClient } from "./realtime/websocket.js";
 import { ApiKeysResource } from "./resources/api-keys.js";
 import { AppsResource } from "./resources/apps.js";
@@ -6,7 +7,6 @@ import { EventsResource } from "./resources/events.js";
 import { TracesResource } from "./resources/traces.js";
 import { WebhooksResource } from "./resources/webhooks.js";
 import { createTransport, type TransportClient } from "./transport.js";
-import { logger } from "./logger.js";
 
 const DEFAULT_BASE_URL = "https://api.axonpush.xyz";
 
@@ -19,8 +19,7 @@ const ENV_VAR_PRECEDENCE = [
 ] as const;
 
 function detectEnvironment(): string | undefined {
-  const env =
-    typeof process !== "undefined" && process.env ? process.env : undefined;
+  const env = typeof process !== "undefined" && process.env ? process.env : undefined;
   if (!env) return undefined;
   for (const name of ENV_VAR_PRECEDENCE) {
     const v = env[name];
@@ -59,9 +58,7 @@ export class AxonPush {
 
     if (this.environment) {
       const source = opts.environment ? "parameter" : "env var";
-      logger.debug(
-        `AxonPush environment=${this.environment} (resolved from ${source})`,
-      );
+      logger.debug(`AxonPush environment=${this.environment} (resolved from ${source})`);
     }
 
     this.api = createTransport({

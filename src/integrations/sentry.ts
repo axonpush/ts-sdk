@@ -53,10 +53,7 @@ export function buildDsn(apiKey: string, channelId: number, host: string): strin
   return `${scheme}://${apiKey}@${host}/${channelId}`;
 }
 
-export function installSentry(
-  sentry: SentryLike,
-  options: InstallSentryOptions = {},
-): void {
+export function installSentry(sentry: SentryLike, options: InstallSentryOptions = {}): void {
   let dsn = options.dsn;
   if (!dsn) {
     const apiKey = options.apiKey ?? process.env.AXONPUSH_API_KEY;
@@ -90,7 +87,12 @@ export function installSentry(
     release: _r,
     ...extraInitOptions
   } = options;
-  void _a; void _c; void _h; void _d; void _e; void _r;
+  void _a;
+  void _c;
+  void _h;
+  void _d;
+  void _e;
+  void _r;
 
   const initOptions: Record<string, unknown> = {
     dsn,

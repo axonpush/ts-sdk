@@ -31,8 +31,8 @@ export {
 } from "./pino.js";
 export {
   buildDsn as buildSentryDsn,
-  installSentry,
   type InstallSentryOptions,
+  installSentry,
   type SentryLike,
 } from "./sentry.js";
 export { axonPushMiddleware } from "./vercel-ai.js";
