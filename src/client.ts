@@ -1,3 +1,4 @@
+import { withEnvironment } from "./environment.js";
 import { logger } from "./logger.js";
 import { WebSocketClient } from "./realtime/websocket.js";
 import { ApiKeysResource } from "./resources/api-keys.js";
@@ -87,6 +88,10 @@ export class AxonPush {
 
   connectWebSocket(): WebSocketClient {
     return new WebSocketClient(this.baseUrl, this.apiKey);
+  }
+
+  withEnvironment<T>(environment: string, fn: () => T): T {
+    return withEnvironment(environment, fn);
   }
 
   [Symbol.dispose](): void {}

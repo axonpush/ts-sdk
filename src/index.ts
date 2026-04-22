@@ -1,4 +1,5 @@
 export { AxonPush, type AxonPushOptions } from "./client.js";
+export { currentEnvironment, withEnvironment } from "./environment.js";
 export {
   AuthenticationError,
   AxonPushError,
@@ -46,11 +47,15 @@ export {
   axonPushMiddleware,
   BackgroundPublisher,
   type BackgroundPublisherOptions,
+  BullMQPublisher,
+  type BullMQPublisherOptions,
+  type BullMQWorkerOptions,
   buildSentryDsn,
   type ConsoleCaptureConfig,
   type ConsoleCaptureHandle,
   createAxonPushPinoStream,
   createAxonPushWinstonTransport,
+  createBullMQWorker,
   detectServerless,
   type Flushable,
   flushAfterInvocation,

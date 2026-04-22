@@ -1,3 +1,4 @@
+import { currentEnvironment } from "../environment.js";
 import { type SSESubscribeOptions, SSESubscription } from "../realtime/sse.js";
 import type { components } from "../schema";
 import type { TransportClient } from "../transport.js";
@@ -46,7 +47,7 @@ export class ChannelsResource {
 
     const qs = params.toString();
     const url = `${this.baseUrl}/channel/${channelId}/subscribe${qs ? `?${qs}` : ""}`;
-    return new SSESubscription(url, this.headers);
+    return new SSESubscription(url, this.buildHeaders(opts?.environment));
   }
 
   subscribeToEvent(
@@ -61,6 +62,12 @@ export class ChannelsResource {
 
     const qs = params.toString();
     const url = `${this.baseUrl}/channel/${channelId}/${eventIdentifier}/subscribe${qs ? `?${qs}` : ""}`;
-    return new SSESubscription(url, this.headers);
+    return new SSESubscription(url, this.buildHeaders(opts?.environment));
+  }
+
+  private buildHeaders(envOverride?: string): Record<string, string> {
+    const env = envOverride ?? currentEnvironment();
+    if (!env) return this.headers;
+    return { ...this.headers, "X-Axonpush-Environment": env };
   }
 }

@@ -20,21 +20,28 @@ import { AxonPush } from "@axonpush/sdk";
 const client = new AxonPush({
   apiKey: "ak_...",
   tenantId: "1",
+  environment: "production",
 });
 
 const app = await client.apps.create("my-app");
 const channel = await client.channels.create("events", app!.id);
 
-await client.events.publish({
+const event = await client.events.publish({
   identifier: "task.started",
   payload: { task: "summarize article" },
   channelId: channel!.id,
   agentId: "research-agent",
   eventType: "agent.start",
 });
+// event.queued === true, event.id is undefined — publishes are async-ingested
+// by default. See "Response shape" below.
 
 const events = await client.events.list(channel!.id);
 ```
+
+### Response shape
+
+By default, `events.publish()` returns as soon as the server has queued the event — typically under 1&nbsp;ms. The returned event carries `identifier`, `queued: true`, `createdAt`, and the resolved `environmentId`, but **not** a DB-assigned `id` (`event.id` is `undefined`). Treat `event.identifier` and `event.traceId` as the durable correlation keys. List endpoints and subscriptions return the fully-persisted shape (with `id`) once the event is written. If you need an audit-critical write, pass `sync: true` on the publish call to force the server's synchronous write path.
 
 ## Configuration
 
@@ -44,8 +51,51 @@ const client = new AxonPush({
   tenantId: "1",          // required
   baseUrl: "https://...", // default: https://api.axonpush.xyz
   failOpen: true,         // default: true — suppresses errors with warnings
+  environment: "production", // optional, auto-detected from env vars if omitted
 });
 ```
+
+## Environments
+
+Tag every event with the environment it came from (`"production"`, `"staging"`, `"eval"`, or any string your team uses). AxonPush uses the tag server-side for isolation, filtering, and per-env quotas. The SDK forwards it as an `X-Axonpush-Environment` header on every request.
+
+### Constructor
+
+```ts
+const client = new AxonPush({ apiKey: "ak_...", tenantId: "1", environment: "production" });
+```
+
+If you omit `environment`, the SDK auto-detects it from the first of these that's set: **`AXONPUSH_ENVIRONMENT`** → `SENTRY_ENVIRONMENT` → `NODE_ENV` → `APP_ENV` → `ENV`. That ordering means existing Sentry/12-factor setups work out of the box, and you can override with `AXONPUSH_ENVIRONMENT` when you need to.
+
+### Per-call override
+
+```ts
+await client.events.publish({
+  identifier: "rerun_eval",
+  payload: { dataset: "v2" },
+  channelId: 1,
+  environment: "eval",  // this event only — doesn't change the client default
+});
+```
+
+### Scoped override with `withEnvironment`
+
+Useful for isolating eval runs, backfills, or shadow traffic from your production event stream without constructing a second client. Propagates through nested async calls via `AsyncLocalStorage`:
+
+```ts
+await client.withEnvironment("eval", async () => {
+  for (const row of dataset) {
+    await client.events.publish({
+      identifier: "row_processed",
+      payload: { id: row.id },
+      channelId: 1,
+    });
+  }
+});
+// outside the callback: environment reverts to whatever the client was constructed with
+```
+
+Resolution order on every publish: **per-call `environment` arg → `withEnvironment` scope → ctor `environment` → env-var autodetect**.
 
 ## Resources
 
@@ -141,6 +191,15 @@ for await (const event of subscription) {
 subscription.abort();
 ```
 
+Subscribe to a single event identifier on a channel:
+
+```ts
+const sub = client.channels.subscribeToEvent(channelId, "web_search");
+for await (const event of sub) {
+  console.log(event.payload);
+}
+```
+
 ### WebSocket
 
 Requires `socket.io-client`:
@@ -189,6 +248,56 @@ const trace = getOrCreateTrace();
 console.log(trace.traceId); // "tr_<random>"
 ```
 
+## Publishing Modes
+
+Every integration (framework callbacks and logging sinks) accepts a `mode` parameter that controls how events reach AxonPush:
+
+| Mode | Backend | Best for |
+|------|---------|----------|
+| `"background"` (default) | In-process bounded queue drained by a single async loop | Most apps — zero config, O(microseconds) on the hot path |
+| `"bullmq"` | Redis-backed [BullMQ](https://docs.bullmq.io/) | Durable delivery, serverless, high volume |
+| `"sync"` | Direct HTTP call | Debugging, tests |
+
+### BullMQ mode
+
+Offload event publishing to a separate worker process backed by Redis. Events survive app restarts and are retried on transient failures.
+
+```bash
+bun add bullmq
+```
+
+```ts
+import IORedis from "ioredis";
+import { AxonPush, AxonPushCallbackHandler } from "@axonpush/sdk";
+
+const client = new AxonPush({ apiKey: "ak_...", tenantId: "1" });
+const connection = new IORedis("redis://localhost:6379", { maxRetriesPerRequest: null });
+
+const handler = new AxonPushCallbackHandler({
+  client,
+  channelId: 1,
+  mode: "bullmq",
+  bullmqOptions: { connection, queueName: "axonpush" },
+});
+await chain.invoke({ input: "..." }, { callbacks: [handler] });
+```
+
+Start a worker to drain the queue in a separate process:
+
+```ts
+// worker.ts
+import IORedis from "ioredis";
+import { AxonPush, createBullMQWorker } from "@axonpush/sdk";
+
+const client = new AxonPush({ apiKey: process.env.AXONPUSH_API_KEY!, tenantId: "1" });
+const connection = new IORedis("redis://localhost:6379", { maxRetriesPerRequest: null });
+
+const worker = await createBullMQWorker({ client, connection, queueName: "axonpush" });
+process.once("SIGTERM", () => worker.close());
+```
+
+`bullmqOptions` accepts the same `connection`, `queueName`, and `jobOptions` (attempts, removeOnComplete, removeOnFail, etc.) on every integration — pino stream, winston transport, console capture, OTel exporter, and all framework callbacks.
+
 ## Framework Integrations
 
 All integrations share a common config:
@@ -201,6 +310,7 @@ const config: IntegrationConfig = {
   channelId: 1,      // channel to publish events to
   agentId: "my-bot", // optional, defaults per framework
   traceId: "tr_...", // optional, auto-generated if omitted
+  mode: "background",// optional: "background" | "sync" | "bullmq"
 };
 ```
 
@@ -389,6 +499,33 @@ provider.addSpanProcessor(
 provider.register();
 ```
 
+### Sentry
+
+If your app is already using `@sentry/node`, point it at AxonPush with a one-liner. `installSentry()` builds a Sentry DSN from your AxonPush credentials and calls `Sentry.init(...)` for you — errors captured anywhere in your app (including Sentry's framework instrumentations) flow into your AxonPush channel instead of Sentry's cloud.
+
+```bash
+bun add @sentry/node   # @axonpush/sdk does not bundle Sentry
+```
+
+```ts
+import * as Sentry from "@sentry/node";
+import { installSentry } from "@axonpush/sdk";
+
+installSentry(Sentry, {
+  apiKey: "ak_...",
+  channelId: 42,
+  environment: "production",
+  release: "my-app@1.2.3",
+  // Any extra keys are forwarded to Sentry.init() unchanged:
+  tracesSampleRate: 0.1,
+  sendDefaultPii: false,
+});
+
+// That's it — Sentry.captureException / captureMessage now ship to AxonPush.
+```
+
+`apiKey`, `channelId`, and `host` fall back to `AXONPUSH_API_KEY`, `AXONPUSH_CHANNEL_ID`, and `AXONPUSH_HOST` (default `api.axonpush.xyz`) if omitted. `environment` uses the same auto-detect precedence as the client (`AXONPUSH_ENVIRONMENT` → `SENTRY_ENVIRONMENT` → `NODE_ENV` → `APP_ENV` → `ENV`). If you need a fully-formed DSN instead, pass `dsn: "..."` and the other args are ignored.
+
 ### AWS Lambda / Google Cloud Functions / Azure Functions
 
 Serverless containers are **frozen between invocations**, so the background worker doesn't get a chance to drain while the process is paused. To guarantee delivery, call `.flush()` at the end of each invocation. The `flushAfterInvocation` helper wraps your handler and flushes in a `finally:` block:
@@ -415,6 +552,8 @@ export const handler = flushAfterInvocation(stream, async (event, _context) => {
 ```
 
 Pass `[handler1, handler2, ...]` to flush multiple integrations in one wrap. The integrations auto-detect Lambda / GCF / Azure Functions at construction time and log a one-time reminder to use `flushAfterInvocation`.
+
+An alternative strategy on serverless is `mode: "bullmq"` with a long-running worker elsewhere — `submit()` becomes a tiny Redis enqueue and you don't need per-invocation flushing at all.
 
 ### Graceful shutdown
 

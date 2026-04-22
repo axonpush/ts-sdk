@@ -1,4 +1,5 @@
 import createClient, { type Middleware } from "openapi-fetch";
+import { currentEnvironment } from "./environment.js";
 import { ConnectionError, mapError } from "./errors.js";
 import { logger } from "./logger.js";
 import type { paths } from "./schema";
@@ -16,8 +17,9 @@ function createAuthMiddleware(opts: TransportOptions): Middleware {
     async onRequest({ request }) {
       request.headers.set("X-API-Key", opts.apiKey);
       request.headers.set("x-tenant-id", opts.tenantId);
-      if (opts.environment) {
-        request.headers.set("X-Axonpush-Environment", opts.environment);
+      if (!request.headers.has("X-Axonpush-Environment")) {
+        const env = currentEnvironment() ?? opts.environment;
+        if (env) request.headers.set("X-Axonpush-Environment", env);
       }
       request.headers.set("Content-Type", "application/json");
       return request;

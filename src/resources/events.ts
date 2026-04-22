@@ -1,3 +1,4 @@
+import { currentEnvironment } from "../environment.js";
 import type { components } from "../schema";
 import { getOrCreateTrace } from "../tracing.js";
 import type { TransportClient } from "../transport.js";
@@ -25,7 +26,7 @@ export class EventsResource {
     const trace = getOrCreateTrace(params.traceId);
     const spanId = params.spanId ?? trace.nextSpanId();
 
-    const effectiveEnv = params.environment ?? this.defaultEnvironment;
+    const effectiveEnv = params.environment ?? currentEnvironment() ?? this.defaultEnvironment;
     const init: RequestInit | undefined = effectiveEnv
       ? { headers: { "X-Axonpush-Environment": effectiveEnv } }
       : undefined;
@@ -53,7 +54,7 @@ export class EventsResource {
     channelId: number,
     opts: { page?: number; limit?: number; environment?: string } = {},
   ): Promise<Event[]> {
-    const effectiveEnv = opts.environment ?? this.defaultEnvironment;
+    const effectiveEnv = opts.environment ?? currentEnvironment() ?? this.defaultEnvironment;
     const { data } = await this.api.GET("/event/{channelId}/list", {
       params: {
         path: { channelId },

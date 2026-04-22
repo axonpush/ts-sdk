@@ -6,6 +6,7 @@ export interface SSESubscribeOptions {
   agentId?: string;
   eventType?: string;
   traceId?: string;
+  environment?: string;
 }
 
 export class SSESubscription implements AsyncIterable<Event> {

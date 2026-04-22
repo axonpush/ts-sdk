@@ -26,7 +26,7 @@ export const DEFAULT_CONCURRENCY = 1;
 
 const IDLE_POLL_INTERVAL_MS = 5;
 
-export type PublisherMode = "background" | "sync";
+export type PublisherMode = "background" | "sync" | "bullmq";
 
 export interface BackgroundPublisherOptions {
   queueSize?: number;

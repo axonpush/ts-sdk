@@ -3,6 +3,7 @@ import type { EventType } from "../index.js";
 import { logger } from "../logger.js";
 import type { PublishParams } from "../resources/events.js";
 import { getOrCreateTrace, type TraceContext } from "../tracing.js";
+import { BullMQPublisher, type BullMQPublisherOptions } from "./_bullmq_publisher.js";
 import {
   type BackgroundPublisher,
   type BackgroundPublisherOptions,
@@ -20,6 +21,7 @@ export interface IntegrationConfig {
   queueSize?: number;
   shutdownTimeoutMs?: number;
   concurrency?: number;
+  bullmqOptions?: BullMQPublisherOptions;
 }
 
 export function truncate(value: unknown, maxLen = 2000): unknown {
@@ -74,7 +76,7 @@ export function initTrace(traceId?: string): TraceContext {
 }
 
 export interface PublisherHolder {
-  publisher: BackgroundPublisher | null;
+  publisher: BackgroundPublisher | BullMQPublisher | null;
 }
 
 export function makePublisher(
@@ -83,11 +85,19 @@ export function makePublisher(
   integrationName: string,
 ): PublisherHolder {
   const mode = config.mode ?? "background";
-  if (mode !== "background" && mode !== "sync") {
-    throw new Error(`mode must be 'background' or 'sync', got ${String(mode)}`);
+  if (mode !== "background" && mode !== "sync" && mode !== "bullmq") {
+    throw new Error(`mode must be 'background', 'sync', or 'bullmq', got ${String(mode)}`);
   }
   if (mode === "sync") {
     return { publisher: null };
+  }
+  if (mode === "bullmq") {
+    if (!config.bullmqOptions) {
+      throw new Error(
+        "mode: 'bullmq' requires bullmqOptions: { connection, queueName?, jobOptions? }",
+      );
+    }
+    return { publisher: new BullMQPublisher(client, config.bullmqOptions) };
   }
   const opts: BackgroundPublisherOptions = {};
   if (config.queueSize !== undefined) opts.queueSize = config.queueSize;

@@ -1,6 +1,6 @@
 {
   "name": "@axonpush/sdk",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -49,6 +49,7 @@
   "peerDependencies": {
     "@opentelemetry/api": "^1.7.0",
     "@opentelemetry/sdk-trace-base": "^1.18.0",
+    "bullmq": "^5",
     "pino": "^9.0.0",
     "typescript": "^5",
     "winston": "^3.11.0",
@@ -59,6 +60,9 @@
       "optional": true
     },
     "@opentelemetry/sdk-trace-base": {
+      "optional": true
+    },
+    "bullmq": {
       "optional": true
     },
     "pino": {

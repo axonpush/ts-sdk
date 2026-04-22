@@ -1,5 +1,11 @@
 export { type IntegrationConfig, safePublish, truncate } from "./_base.js";
 export {
+  BullMQPublisher,
+  type BullMQPublisherOptions,
+  type BullMQWorkerOptions,
+  createBullMQWorker,
+} from "./_bullmq_publisher.js";
+export {
   BackgroundPublisher,
   type BackgroundPublisherOptions,
   DEFAULT_QUEUE_SIZE,
