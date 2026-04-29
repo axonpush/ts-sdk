@@ -9,11 +9,30 @@ type CreateEventDto = components["schemas"]["CreateEventDto"];
 export type PublishParams = Omit<CreateEventDto, "channel_id"> & {
   channelId: number;
   environment?: string;
-  /** Force the server's synchronous write path for this call. Default is
-   * async — the server returns a {identifier, queued: true} shape and the
-   * event persists ~100ms later. Use sync=true for audit-critical writes. */
   sync?: boolean;
 };
+
+export interface EventQueryParams {
+  channelId?: number;
+  appId?: number;
+  environmentId?: string;
+  eventType?: string | string[];
+  agentId?: string;
+  traceId?: string;
+  since?: string;
+  until?: string;
+  cursor?: string;
+  limit?: number;
+  payloadFilter?: Record<string, unknown>;
+  environment?: string;
+}
+
+export interface EventListPage {
+  data: Event[];
+  cursor?: string;
+}
+
+const DEFAULT_LIMIT = 100;
 
 export class EventsResource {
   constructor(
@@ -50,21 +69,72 @@ export class EventsResource {
     return data;
   }
 
-  async list(
-    channelId: number,
-    opts: { page?: number; limit?: number; environment?: string } = {},
-  ): Promise<Event[]> {
-    const effectiveEnv = opts.environment ?? currentEnvironment() ?? this.defaultEnvironment;
-    const { data } = await this.api.GET("/event/{channelId}/list", {
-      params: {
-        path: { channelId },
-        query: {
-          page: opts.page ?? 1,
-          limit: opts.limit ?? 10,
-          ...(effectiveEnv ? { environment: effectiveEnv } : {}),
-        },
-      },
-    });
-    return (data as Event[] | undefined) ?? [];
+  async list(channelId: number, params: EventQueryParams = {}): Promise<EventListPage> {
+    const merged: EventQueryParams = { ...params, channelId };
+    return this.runQuery("/event/{channelId}/list", { channelId }, merged);
   }
+
+  async search(params: EventQueryParams = {}): Promise<EventListPage> {
+    return this.runQuery("/events/search", undefined, params);
+  }
+
+  private async runQuery(
+    path: string,
+    pathParams: Record<string, number> | undefined,
+    params: EventQueryParams,
+  ): Promise<EventListPage> {
+    const effectiveEnv = params.environment ?? currentEnvironment() ?? this.defaultEnvironment;
+    const query = serializeEventQuery(params);
+    if (effectiveEnv) query.environment = effectiveEnv;
+
+    const requestPath = pathParams
+      ? Object.entries(pathParams).reduce((acc, [k, v]) => acc.replace(`{${k}}`, String(v)), path)
+      : path;
+
+    const url = appendQuery(requestPath, query);
+    const { data } = await (
+      this.api as unknown as {
+        GET: (
+          url: string,
+          opts?: Record<string, unknown>,
+        ) => Promise<{ data?: { data?: Event[]; meta?: unknown; cursor?: string } }>;
+      }
+    ).GET(url);
+
+    if (Array.isArray(data)) return { data: data as Event[] };
+    const events = (data?.data ?? []) as Event[];
+    const cursor = (data as { cursor?: string } | undefined)?.cursor;
+    return { data: events, ...(cursor ? { cursor } : {}) };
+  }
+}
+
+export function serializeEventQuery(params: EventQueryParams): Record<string, string> {
+  const out: Record<string, string> = {};
+  if (params.channelId !== undefined) out.channelId = String(params.channelId);
+  if (params.appId !== undefined) out.appId = String(params.appId);
+  if (params.environmentId) out.environmentId = params.environmentId;
+  if (params.agentId) out.agentId = params.agentId;
+  if (params.traceId) out.traceId = params.traceId;
+  if (params.since) out.since = params.since;
+  if (params.until) out.until = params.until;
+  if (params.cursor) out.cursor = params.cursor;
+  out.limit = String(params.limit ?? DEFAULT_LIMIT);
+
+  if (params.eventType) {
+    out.eventType = Array.isArray(params.eventType) ? params.eventType.join(",") : params.eventType;
+  }
+
+  if (params.payloadFilter && Object.keys(params.payloadFilter).length > 0) {
+    out.payloadFilter = JSON.stringify(params.payloadFilter);
+  }
+  return out;
+}
+
+function appendQuery(path: string, query: Record<string, string>): string {
+  const entries = Object.entries(query);
+  if (entries.length === 0) return path;
+  const search = new URLSearchParams();
+  for (const [k, v] of entries) search.set(k, v);
+  const sep = path.includes("?") ? "&" : "?";
+  return `${path}${sep}${search.toString()}`;
 }

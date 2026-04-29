@@ -1,6 +1,6 @@
 {
   "name": "@axonpush/sdk",
-  "version": "0.0.4",
+  "version": "0.1.0",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -34,6 +34,7 @@
   },
   "dependencies": {
     "consola": "^3.4.2",
+    "mqtt": "^5.10.1",
     "openapi-fetch": "^0.17.0"
   },
   "devDependencies": {
@@ -77,8 +78,5 @@
     "winston-transport": {
       "optional": true
     }
-  },
-  "optionalDependencies": {
-    "socket.io-client": "^4"
   }
 }

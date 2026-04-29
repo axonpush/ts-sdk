@@ -11,13 +11,24 @@ export {
   ValidationError,
 } from "./errors.js";
 export { logger } from "./logger.js";
-export { type SSESubscribeOptions, SSESubscription } from "./realtime/sse.js";
 export {
+  buildPublishTopic,
+  buildSubscribeTopic,
+  type FetchCredentialsOptions,
+  fetchIotCredentials,
+  type IotCredentials,
+  type MqttFactory,
+  type MqttLikeClient,
+  msUntilRefresh,
   type PublishData,
+  RealtimeClient,
+  type RealtimeClientOptions,
   type SubscribeFilters,
+  type TopicParts,
   WebSocketClient,
-} from "./realtime/websocket.js";
-export type { PublishParams } from "./resources/events.js";
+} from "./realtime/index.js";
+export { type SSESubscribeOptions, SSESubscription } from "./realtime/sse.js";
+export type { EventListPage, EventQueryParams, PublishParams } from "./resources/events.js";
 export type { components, paths } from "./schema";
 export {
   currentTrace,
@@ -25,6 +36,7 @@ export {
   TraceContext,
   withTrace,
 } from "./tracing.js";
+export type { AxonPushConfig } from "./transport.js";
 
 export type AxonEvent = import("./schema").components["schemas"]["Event"];
 export type Channel = import("./schema").components["schemas"]["Channel"];

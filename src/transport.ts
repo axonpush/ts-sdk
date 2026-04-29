@@ -10,6 +10,18 @@ export interface TransportOptions {
   baseUrl: string;
   failOpen: boolean;
   environment?: string;
+  wsUrl?: string;
+  iotEndpoint?: string;
+}
+
+export interface AxonPushConfig {
+  apiKey: string;
+  tenantId: string;
+  baseUrl: string;
+  wsUrl?: string;
+  iotEndpoint?: string;
+  failOpen?: boolean;
+  environment?: string;
 }
 
 function createAuthMiddleware(opts: TransportOptions): Middleware {

@@ -1,4 +1,5 @@
 import type { components } from "../schema";
+import { RealtimeClient, type RealtimeClientOptions } from "./mqtt.js";
 
 type Event = components["schemas"]["Event"];
 
@@ -9,58 +10,68 @@ export interface SSESubscribeOptions {
   environment?: string;
 }
 
-export class SSESubscription implements AsyncIterable<Event> {
-  private controller = new AbortController();
+export interface SSESubscriptionInit {
+  channelId: string | number;
+  filters?: SSESubscribeOptions;
+  eventIdentifier?: string;
+  realtimeOpts: RealtimeClientOptions;
+}
 
-  constructor(
-    private url: string,
-    private headers: Record<string, string>,
-  ) {}
+let warned = false;
+function warnDeprecated(): void {
+  if (warned) return;
+  warned = true;
+  console.warn(
+    "[axonpush] SSE subscription has been removed. The SSESubscription class now uses MQTT under the hood; migrate to RealtimeClient for full features.",
+  );
+}
+
+export class SSESubscription implements AsyncIterable<Event> {
+  private aborted = false;
+  private readonly client: RealtimeClient;
+  private readonly init: SSESubscriptionInit;
+
+  constructor(init: SSESubscriptionInit) {
+    warnDeprecated();
+    this.init = init;
+    this.client = new RealtimeClient(init.realtimeOpts);
+  }
 
   abort(): void {
-    this.controller.abort();
+    this.aborted = true;
+    void this.client.disconnect();
   }
 
   async *[Symbol.asyncIterator](): AsyncGenerator<Event> {
-    const response = await fetch(this.url, {
-      headers: {
-        ...this.headers,
-        Accept: "text/event-stream",
-        "Cache-Control": "no-cache",
-      },
-      signal: this.controller.signal,
+    if (this.aborted) return;
+    const queue: Event[] = [];
+    let resolveWaiter: (() => void) | null = null;
+
+    this.client.onEvent((event) => {
+      if (this.init.eventIdentifier && event.identifier !== this.init.eventIdentifier) return;
+      const traceId = this.init.filters?.traceId;
+      if (traceId && event.traceId !== traceId) return;
+      queue.push(event);
+      resolveWaiter?.();
+      resolveWaiter = null;
     });
 
-    if (!response.ok || !response.body) return;
-
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder();
-    let buffer = "";
+    await this.client.connect();
+    this.client.subscribe(this.init.channelId, this.init.filters);
 
     try {
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split("\n");
-        buffer = lines.pop() ?? "";
-
-        let dataLines: string[] = [];
-        for (const line of lines) {
-          if (line.startsWith("data: ")) {
-            dataLines.push(line.slice(6));
-          } else if (line === "" && dataLines.length > 0) {
-            try {
-              const event: Event = JSON.parse(dataLines.join("\n"));
-              yield event;
-            } catch {}
-            dataLines = [];
-          }
+      while (!this.aborted) {
+        if (queue.length === 0) {
+          await new Promise<void>((resolve) => {
+            resolveWaiter = resolve;
+          });
+          continue;
         }
+        const next = queue.shift();
+        if (next) yield next;
       }
     } finally {
-      reader.releaseLock();
+      await this.client.disconnect();
     }
   }
 }

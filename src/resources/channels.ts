@@ -5,12 +5,18 @@ import type { TransportClient } from "../transport.js";
 
 type Channel = components["schemas"]["Channel"];
 
+export interface ChannelsResourceContext {
+  baseUrl: string;
+  headers: Record<string, string>;
+  orgId: string;
+  appId: string;
+}
+
 export class ChannelsResource {
   constructor(
     private api: TransportClient,
     _failOpen: boolean,
-    private baseUrl: string,
-    private headers: Record<string, string>,
+    private ctx: ChannelsResourceContext,
   ) {}
 
   async create(name: string, appId: number): Promise<Channel | undefined> {
@@ -40,14 +46,16 @@ export class ChannelsResource {
   }
 
   subscribe(channelId: number, opts?: SSESubscribeOptions): SSESubscription {
-    const params = new URLSearchParams();
-    if (opts?.agentId) params.set("agentId", opts.agentId);
-    if (opts?.eventType) params.set("eventType", opts.eventType);
-    if (opts?.traceId) params.set("traceId", opts.traceId);
-
-    const qs = params.toString();
-    const url = `${this.baseUrl}/channel/${channelId}/subscribe${qs ? `?${qs}` : ""}`;
-    return new SSESubscription(url, this.buildHeaders(opts?.environment));
+    return new SSESubscription({
+      channelId,
+      ...(opts ? { filters: opts } : {}),
+      realtimeOpts: {
+        baseUrl: this.ctx.baseUrl,
+        headers: this.buildHeaders(opts?.environment),
+        orgId: this.ctx.orgId,
+        appId: this.ctx.appId,
+      },
+    });
   }
 
   subscribeToEvent(
@@ -55,19 +63,22 @@ export class ChannelsResource {
     eventIdentifier: string,
     opts?: SSESubscribeOptions,
   ): SSESubscription {
-    const params = new URLSearchParams();
-    if (opts?.agentId) params.set("agentId", opts.agentId);
-    if (opts?.eventType) params.set("eventType", opts.eventType);
-    if (opts?.traceId) params.set("traceId", opts.traceId);
-
-    const qs = params.toString();
-    const url = `${this.baseUrl}/channel/${channelId}/${eventIdentifier}/subscribe${qs ? `?${qs}` : ""}`;
-    return new SSESubscription(url, this.buildHeaders(opts?.environment));
+    return new SSESubscription({
+      channelId,
+      eventIdentifier,
+      ...(opts ? { filters: opts } : {}),
+      realtimeOpts: {
+        baseUrl: this.ctx.baseUrl,
+        headers: this.buildHeaders(opts?.environment),
+        orgId: this.ctx.orgId,
+        appId: this.ctx.appId,
+      },
+    });
   }
 
   private buildHeaders(envOverride?: string): Record<string, string> {
     const env = envOverride ?? currentEnvironment();
-    if (!env) return this.headers;
-    return { ...this.headers, "X-Axonpush-Environment": env };
+    if (!env) return this.ctx.headers;
+    return { ...this.ctx.headers, "X-Axonpush-Environment": env };
   }
 }

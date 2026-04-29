@@ -1,6 +1,6 @@
 # @axonpush/sdk
 
-TypeScript SDK for [AxonPush](https://axonpush.xyz) — real-time event infrastructure for AI agent systems.
+TypeScript SDK for [AxonPush](https://axonpush.xyz) — real-time event infrastructure for AI agent systems. ESM-only; works in Node and browser runtimes.
 
 ## Install
 
@@ -12,6 +12,8 @@ bun add @axonpush/sdk
 npm install @axonpush/sdk
 ```
 
+> **v0.1.0 is a breaking release.** The realtime transport moved from Socket.IO/SSE to MQTT-over-WSS against AWS IoT Core, and `events.search()` / `events.list()` no longer accept a Lucene `q` string. See [Migrating from 0.0.x](#migrating-from-00x).
+
 ## Quick Start
 
 ```ts
@@ -20,23 +22,28 @@ import { AxonPush } from "@axonpush/sdk";
 const client = new AxonPush({
   apiKey: "ak_...",
   tenantId: "1",
+  orgId: "org_123",
+  appId: "app_456",
   environment: "production",
 });
 
-const app = await client.apps.create("my-app");
-const channel = await client.channels.create("events", app!.id);
-
-const event = await client.events.publish({
+// publish via REST
+await client.events.publish({
   identifier: "task.started",
   payload: { task: "summarize article" },
-  channelId: channel!.id,
+  channelId: 1,
   agentId: "research-agent",
   eventType: "agent.start",
 });
-// event.queued === true, event.id is undefined — publishes are async-ingested
-// by default. See "Response shape" below.
 
-const events = await client.events.list(channel!.id);
+// subscribe via MQTT
+const realtime = client.connectRealtime();
+await realtime.connect();
+realtime.onEvent((event) => {
+  console.log(event.identifier, event.payload);
+});
+realtime.subscribe(1, { eventType: "agent.start" });
+await realtime.wait();
 ```
 
 ### Response shape
@@ -47,13 +54,19 @@ By default, `events.publish()` returns as soon as the server has queued the even
 
 ```ts
 const client = new AxonPush({
-  apiKey: "ak_...",       // required
-  tenantId: "1",          // required
-  baseUrl: "https://...", // default: https://api.axonpush.xyz
-  failOpen: true,         // default: true — suppresses errors with warnings
+  apiKey: "ak_...",          // required
+  tenantId: "1",             // required
+  orgId: "org_123",          // optional, defaults to tenantId
+  appId: "app_456",          // optional, defaults to "default"
+  baseUrl: "https://...",    // default: https://api.axonpush.xyz
+  iotEndpoint: "...",        // optional override; otherwise auto-fetched
+  wsUrl: "...",              // optional override for the realtime WSS URL
+  failOpen: true,            // default: true — suppresses errors with warnings
   environment: "production", // optional, auto-detected from env vars if omitted
 });
 ```
+
+`iotEndpoint` and `wsUrl` are advanced overrides — by default the SDK fetches a short-lived presigned WSS URL from `GET /auth/iot-credentials` on each `connect()` and refreshes it 60 seconds before expiry. `orgId` and `appId` form the MQTT topic prefix `axonpush/<orgId>/<appId>/<channelId>/<eventType>/<agentId>`.
 
 ## Environments
 
@@ -104,7 +117,7 @@ Resolution order on every publish: **per-call `environment` arg → `withEnviron
 ```ts
 const app = await client.apps.create("my-app");
 const apps = await client.apps.list();
-const app = await client.apps.get(1);
+const found = await client.apps.get(1);
 await client.apps.update(1, "new-name");
 await client.apps.delete(1);
 ```
@@ -113,15 +126,17 @@ await client.apps.delete(1);
 
 ```ts
 const channel = await client.channels.create("events", appId);
-const channel = await client.channels.get(1);
+const found = await client.channels.get(1);
 await client.channels.update(1);
 await client.channels.delete(1);
 ```
 
 ### Events
 
+#### Publishing
+
 ```ts
-const event = await client.events.publish({
+await client.events.publish({
   identifier: "agent.task",
   payload: { key: "value" },
   channelId: 1,
@@ -130,9 +145,39 @@ const event = await client.events.publish({
   eventType: "agent.start",    // "agent.start" | "agent.end" | "agent.message" | "agent.tool_call.start" | "agent.tool_call.end" | "agent.error" | "agent.handoff" | "agent.llm.token" | "custom"
   metadata: { custom: "data" },
 });
-
-const events = await client.events.list(channelId, { page: 1, limit: 20 });
 ```
+
+#### Searching (REST)
+
+`events.list()` and `events.search()` take a typed `EventQueryParams`:
+
+```ts
+const page = await client.events.list(channelId, {
+  eventType: "agent.error",
+  agentId: "my-agent",
+  traceId: "tr_abc123",
+  since: "2026-04-01T00:00:00Z",
+  until: "2026-04-29T00:00:00Z",
+  limit: 50,
+  cursor: previousPage.cursor,
+});
+```
+
+`payloadFilter` accepts MongoDB-style operators (validated server-side via `sift.js`) and is JSON-stringified into the query string:
+
+```ts
+const errors = await client.events.search({
+  channelId: 1,
+  eventType: "agent.error",
+  payloadFilter: {
+    "user.id": { $eq: "u_123" },
+    "retries":  { $gte: 3 },
+  },
+  limit: 100,
+});
+```
+
+The Lucene `q: "..."` parameter is gone — translate any prior queries into the structured shape above.
 
 ### Traces
 
@@ -172,60 +217,48 @@ const keys = await client.apiKeys.list();
 await client.apiKeys.revoke(1);
 ```
 
-## Real-time
+## Real-time (MQTT)
 
-### SSE (Server-Sent Events)
+Realtime uses MQTT-over-WSS against AWS IoT Core. Topics follow the shape:
 
-```ts
-const subscription = client.channels.subscribe(channelId, {
-  agentId: "my-agent",
-  eventType: "agent.error",
-  traceId: "tr_abc123",
-});
-
-for await (const event of subscription) {
-  console.log(event.identifier, event.payload);
-}
-
-// cancel
-subscription.abort();
+```
+axonpush/<orgId>/<appId>/<channelId>/<eventType>/<agentId>
 ```
 
-Subscribe to a single event identifier on a channel:
+When you call `subscribe()` without filters, the SDK substitutes `+` (single-segment wildcard) for `eventType` / `agentId`, so a bare subscribe receives every event on the channel; passing filters narrows the topic and AWS IoT does the matching.
 
 ```ts
-const sub = client.channels.subscribeToEvent(channelId, "web_search");
-for await (const event of sub) {
-  console.log(event.payload);
-}
-```
+const realtime = client.connectRealtime();   // or client.connectWebSocket() — same class
+await realtime.connect();
 
-### WebSocket
-
-Requires `socket.io-client`:
-
-```bash
-bun add socket.io-client
-```
-
-```ts
-const ws = client.connectWebSocket();
-await ws.connect();
-
-ws.onEvent((event) => {
+realtime.onEvent((event) => {
   console.log(event.identifier, event.payload);
 });
 
-ws.subscribe(channelId, { eventType: "agent.error" });
-ws.publish({
+realtime.subscribe(channelId, { eventType: "agent.error" });
+realtime.subscribe(channelId, { agentId: "research-agent" });
+
+realtime.publish({
   channelId: 1,
   identifier: "task.update",
   payload: { status: "running" },
+  eventType: "custom",
+  agentId: "controller",
 });
 
-await ws.wait();     // blocks until disconnect
-await ws.disconnect();
+realtime.unsubscribe(channelId, { eventType: "agent.error" });
+
+await realtime.wait();         // resolves when disconnect() is called
+await realtime.disconnect();
 ```
+
+The class is exported as both `RealtimeClient` and `WebSocketClient` (the latter is a subclass alias kept for back-compat with code that imported `WebSocketClient` from 0.0.x). They behave identically.
+
+### Credential lifecycle
+
+`connect()` calls `GET /auth/iot-credentials` (using your API key + tenant ID), receives a presigned WSS URL with embedded SigV4 query params, and connects `mqtt.js` to it. A timer fires 60 seconds before the credential expiry, fetches a new presigned URL, opens a fresh MQTT client, swaps it in, and tears down the old connection — re-subscribing all live topics on the new client.
+
+If a refresh fails, the SDK retries after 30 seconds and logs a warning via `consola`. `mqtt.js`'s own auto-reconnect handles transient socket-level drops; credential expiry is handled by the SDK's swap.
 
 ## Distributed Tracing
 
@@ -314,21 +347,20 @@ const config: IntegrationConfig = {
 };
 ```
 
-### Vercel AI SDK
+All integrations import from `@axonpush/sdk` and accept the `IntegrationConfig` shown above. Pick the one(s) that match your stack:
 
-```ts
-import { axonPushMiddleware } from "@axonpush/sdk";
-import { wrapLanguageModel } from "ai";
+| Framework | Import | Events emitted |
+|-----------|--------|----------------|
+| Vercel AI SDK | `axonPushMiddleware` — wrap into `wrapLanguageModel({ middleware })` | `llm.start/end`, `llm.token` |
+| LangChain.js | `AxonPushCallbackHandler` — pass via `{ callbacks: [handler] }` | `chain.*`, `llm.*`, `tool.*` |
+| LangGraph.js | `AxonPushLangGraphHandler` — same callback shape | LangChain set + `graph.node.start/end` |
+| OpenAI Agents | `AxonPushRunHooks` — pass as `{ hooks }` to `Runner.run` | `agent.run.start/end`, `tool.*`, `agent.handoff` |
+| Anthropic SDK | `AxonPushAnthropicTracer` — wraps `messages.create` and tool results | `conversation.turn`, `tool.*`, `agent.response`, `tool.result` |
+| Mastra | `AxonPushMastraHooks` — `onWorkflowStart/End`, `beforeToolUse`, `afterToolUse` | `workflow.*`, `tool.*` |
+| LlamaIndex.TS | `AxonPushLlamaIndexHandler` — `onLLMStart/End`, `onRetrieverStart/End` | `llm.*`, `embedding.*`, `retriever.*`, `query.*` |
+| Google ADK | `axonPushADKCallbacks` — pass to ADK agent config | `agent.*`, `llm.*`, `tool.*` |
 
-const middleware = axonPushMiddleware(config);
-const model = wrapLanguageModel({ model: openai("gpt-4o"), middleware });
-
-const result = await generateText({ model, prompt: "Hello" });
-```
-
-Events: `llm.start`, `llm.end`, `llm.token`
-
-### LangChain.js
+Example (LangChain — others follow the same pattern):
 
 ```ts
 import { AxonPushCallbackHandler } from "@axonpush/sdk";
@@ -337,97 +369,11 @@ const handler = new AxonPushCallbackHandler(config);
 await chain.invoke({ input: "..." }, { callbacks: [handler] });
 ```
 
-Events: `chain.start/end/error`, `llm.start/end/error`, `llm.token`, `tool.{name}.start`, `tool.end`, `tool.error`
-
-### LangGraph.js
-
-```ts
-import { AxonPushLangGraphHandler } from "@axonpush/sdk";
-
-const handler = new AxonPushLangGraphHandler(config);
-await graph.invoke({ input: "..." }, { callbacks: [handler] });
-```
-
-Events: everything from LangChain + `graph.node.start/end`
-
-### OpenAI Agents SDK
-
-```ts
-import { AxonPushRunHooks } from "@axonpush/sdk";
-
-const hooks = new AxonPushRunHooks(config);
-const result = await Runner.run(agent, { input: "...", hooks });
-```
-
-Events: `agent.run.start/end`, `tool.{name}.start/end`, `agent.handoff`
-
-### Anthropic SDK
-
-```ts
-import { AxonPushAnthropicTracer } from "@axonpush/sdk";
-import Anthropic from "@anthropic-ai/sdk";
-
-const tracer = new AxonPushAnthropicTracer(config);
-const anthropic = new Anthropic();
-
-const response = await tracer.createMessage(anthropic, {
-  model: "claude-sonnet-4-20250514",
-  max_tokens: 1024,
-  messages: [{ role: "user", content: "Hello" }],
-});
-
-// when sending tool results back
-tracer.sendToolResult("toolu_123", { result: "42" });
-```
-
-Events: `conversation.turn`, `tool.{name}.start`, `agent.response`, `tool.result`
-
-### Mastra
-
-```ts
-import { AxonPushMastraHooks } from "@axonpush/sdk";
-
-const hooks = new AxonPushMastraHooks(config);
-
-hooks.onWorkflowStart("my-workflow", input);
-hooks.beforeToolUse("search", { query: "..." });
-hooks.afterToolUse("search", results);
-hooks.onWorkflowEnd("my-workflow", output);
-```
-
-Events: `workflow.start/end/error`, `tool.{name}.start/end`
-
-### LlamaIndex.TS
-
-```ts
-import { AxonPushLlamaIndexHandler } from "@axonpush/sdk";
-
-const handler = new AxonPushLlamaIndexHandler(config);
-
-handler.onLLMStart("gpt-4o", 3);
-handler.onRetrieverStart("what is axonpush?");
-handler.onRetrieverEnd(5);
-handler.onLLMEnd(response);
-```
-
-Events: `llm.start/end`, `llm.token`, `embedding.start/end`, `retriever.query/result`, `query.start/end`
-
-### Google ADK
-
-```ts
-import { axonPushADKCallbacks } from "@axonpush/sdk";
-
-const callbacks = axonPushADKCallbacks(config);
-// pass to ADK agent configuration
-```
-
-Events: `agent.start/end`, `llm.start/end`, `tool.{name}.start/end`
-
 ## Logging & Observability
 
-Ship logs and traces from your existing Node.js observability stack to AxonPush. Four integrations are shipped: **Pino**, **Winston**, `console` capture, and an **OpenTelemetry** `SpanExporter`. All four emit OpenTelemetry-shaped payloads, so the events line up with anything else you're already sending to an OTel-compatible backend.
+Ship logs and traces from your existing Node.js observability stack to AxonPush. Four integrations are shipped: **Pino**, **Winston**, `console` capture, and an **OpenTelemetry** `SpanExporter`. All four emit OpenTelemetry-shaped payloads via REST `POST /event`, so the events line up with anything else you're already sending to an OTel-compatible backend.
 
-> **Non-blocking by default (v0.0.2+).** Each integration submits publishes onto a bounded in-memory queue and drains them from a single background task, so `log.info(...)` stays O(microseconds) on the caller's path — no HTTP round-trip on the hot path. The queue is bounded (default 1000 records); overflow drops the oldest with a rate-limited warning. Call `.flush(timeoutMs?)` or use `flushAfterInvocation(handler, fn)` at known checkpoints (end of a Lambda invocation, end of a test) to guarantee delivery. Pass `mode: "sync"` on any integration if you need blocking publishes. A `beforeExit` / `SIGTERM` / `SIGINT` hook drains all live publishers automatically at process shutdown.
+> **Non-blocking by default.** Each integration submits publishes onto a bounded in-memory queue and drains them from a single background task, so `log.info(...)` stays O(microseconds) on the caller's path — no HTTP round-trip on the hot path. The queue is bounded (default 1000 records); overflow drops the oldest with a rate-limited warning. Call `.flush(timeoutMs?)` or use `flushAfterInvocation(handler, fn)` at known checkpoints (end of a Lambda invocation, end of a test) to guarantee delivery. Pass `mode: "sync"` on any integration if you need blocking publishes. A `beforeExit` / `SIGTERM` / `SIGINT` hook drains all live publishers automatically at process shutdown.
 
 ### Pino
 
@@ -436,7 +382,7 @@ import pino from "pino";
 import { AxonPush } from "@axonpush/sdk";
 import { createAxonPushPinoStream } from "@axonpush/sdk/integrations/pino";
 
-const client = new AxonPush({ apiKey: "ak_..." });
+const client = new AxonPush({ apiKey: "ak_...", tenantId: "1" });
 const stream = createAxonPushPinoStream({
   client,
   channelId: 1,
@@ -453,7 +399,7 @@ import winston from "winston";
 import { AxonPush } from "@axonpush/sdk";
 import { createAxonPushWinstonTransport } from "@axonpush/sdk/integrations/winston";
 
-const client = new AxonPush({ apiKey: "ak_..." });
+const client = new AxonPush({ apiKey: "ak_...", tenantId: "1" });
 const log = winston.createLogger({
   transports: [
     new winston.transports.Console(),
@@ -471,7 +417,7 @@ For AI agents that emit free-form output via `console.log`:
 import { AxonPush } from "@axonpush/sdk";
 import { setupConsoleCapture } from "@axonpush/sdk/integrations/console";
 
-const client = new AxonPush({ apiKey: "ak_..." });
+const client = new AxonPush({ apiKey: "ak_...", tenantId: "1" });
 const handle = setupConsoleCapture({ client, channelId: 1, agentId: "my-agent" });
 
 console.log("agent starting");  // captured AND still written to the terminal
@@ -490,7 +436,7 @@ const provider = new NodeTracerProvider();
 provider.addSpanProcessor(
   new SimpleSpanProcessor(
     new AxonPushSpanExporter({
-      client: new AxonPush({ apiKey: "ak_..." }),
+      client: new AxonPush({ apiKey: "ak_...", tenantId: "1" }),
       channelId: 1,
       serviceName: "my-api",
     }),
@@ -498,6 +444,8 @@ provider.addSpanProcessor(
 );
 provider.register();
 ```
+
+The exporter posts span batches to the same `/event` REST endpoint as everything else — it does not route through MQTT.
 
 ### Sentry
 
@@ -513,6 +461,7 @@ import { installSentry } from "@axonpush/sdk";
 
 installSentry(Sentry, {
   apiKey: "ak_...",
+  projectId: "proj_42",
   channelId: 42,
   environment: "production",
   release: "my-app@1.2.3",
@@ -534,11 +483,10 @@ Serverless containers are **frozen between invocations**, so the background work
 import { AxonPush } from "@axonpush/sdk";
 import {
   createAxonPushPinoStream,
-  // OR: createAxonPushWinstonTransport from ".../integrations/winston"
+  flushAfterInvocation,
 } from "@axonpush/sdk/integrations/pino";
-import { flushAfterInvocation } from "@axonpush/sdk/integrations/pino";
 
-const client = new AxonPush({ apiKey: process.env.AXONPUSH_API_KEY! });
+const client = new AxonPush({ apiKey: process.env.AXONPUSH_API_KEY!, tenantId: "1" });
 const stream = createAxonPushPinoStream({
   client,
   channelId: Number(process.env.AXONPUSH_CHANNEL_ID_LOGGING),
@@ -571,6 +519,27 @@ logger.level = 3; // warnings (default)
 logger.level = 5; // verbose
 ```
 
+## Migrating from 0.0.x
+
+**Realtime: Socket.IO and SSE → MQTT.** The Socket.IO `/events` namespace and the SSE `/subscribe` stream are gone. The new transport is MQTT-over-WSS to AWS IoT Core, fronted by the same `connectWebSocket()` / `connectRealtime()` calls you already had — `WebSocketClient` is an alias of `RealtimeClient` and keeps its public surface (`connect`, `subscribe`, `unsubscribe`, `publish`, `onEvent`, `disconnect`, `wait`). Remove `socket.io-client` from your `package.json` — it's no longer a dependency.
+
+**SSE shims still work, with a deprecation warning.** `client.channels.subscribe(channelId, ...)` and `client.channels.subscribeToEvent(channelId, identifier, ...)` still return an `AsyncIterable<Event>` and accept the same options; internally they now open an MQTT connection and adapt it to the iterable. They emit a one-time `console.warn` on first use and will be removed in a future version — migrate to `RealtimeClient` for new code.
+
+**`events.search()` / `events.list()`: no more Lucene.** The `q: "channelId:1 AND ..."` shape is gone. Replace it with the typed query object:
+
+```ts
+// 0.0.x
+await client.events.search({ q: 'channelId:1 AND payload.user.id:"u_123"' });
+
+// 0.1.x
+await client.events.search({
+  channelId: 1,
+  payloadFilter: { "user.id": { $eq: "u_123" } },
+});
+```
+
+**Constructor: new options.** `AxonPushOptions` gained `iotEndpoint`, `wsUrl`, `orgId`, and `appId`. None are required for managed AxonPush — `orgId` defaults to `tenantId` and `appId` defaults to `"default"`. Selfhost deployments will typically pass all four.
+
 ## Error Handling
 
 When `failOpen: true` (default), errors are logged as warnings and methods return `undefined`. When `failOpen: false`, errors are thrown:
@@ -591,7 +560,11 @@ try {
 }
 ```
 
-Error classes: `AxonPushError`, `AuthenticationError` (401), `ForbiddenError` (403), `NotFoundError` (404), `ValidationError` (400), `RateLimitError` (429), `ServerError` (5xx), `ConnectionError`
+Error classes: `AxonPushError`, `AuthenticationError` (401), `ForbiddenError` (403), `NotFoundError` (404), `ValidationError` (400), `RateLimitError` (429), `ServerError` (5xx), `ConnectionError`.
+
+### Realtime errors
+
+`mqtt.js` handles transient socket-level reconnects automatically. Credential expiry is handled by the SDK as described in [Real-time (MQTT)](#real-time-mqtt). `connect()` rejects on the first hard failure (e.g. a 401 from `/auth/iot-credentials` — your API key is bad) so you can fail fast; after a successful connect, transient errors are logged but do not reject any pending promise.
 
 ## Types
 
@@ -607,6 +580,9 @@ import type {
   ApiKey,
   CreateEventDto,
   EventType,
+  EventQueryParams,
+  EventListPage,
+  PublishParams,
   components,
   paths,
 } from "@axonpush/sdk";
