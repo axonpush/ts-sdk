@@ -1,7 +1,7 @@
 import type { components } from "../schema";
 import { RealtimeClient, type RealtimeClientOptions } from "./mqtt.js";
 
-type Event = components["schemas"]["Event"];
+type Event = components["schemas"]["EventResponseDto"];
 
 export interface SSESubscribeOptions {
   agentId?: string;

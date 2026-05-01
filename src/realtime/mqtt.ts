@@ -8,12 +8,13 @@ import {
 } from "./credentials.js";
 import { buildPublishTopic, buildSubscribeTopic, type TopicParts } from "./topics.js";
 
-type Event = components["schemas"]["Event"];
+type Event = components["schemas"]["EventResponseDto"];
 
 export interface SubscribeFilters {
   agentId?: string;
   eventType?: string;
   traceId?: string;
+  environment?: string;
 }
 
 export interface PublishData {
@@ -23,6 +24,7 @@ export interface PublishData {
   agentId?: string;
   traceId?: string;
   eventType?: string;
+  environment?: string;
 }
 
 export interface RealtimeClientOptions {
@@ -30,6 +32,7 @@ export interface RealtimeClientOptions {
   headers: Record<string, string>;
   orgId: string;
   appId: string;
+  defaultEnvironment?: string;
   fetchImpl?: typeof fetch;
   mqttFactory?: MqttFactory;
   refreshLeadSeconds?: number;
@@ -110,6 +113,7 @@ export class RealtimeClient {
       orgId: this.opts.orgId,
       appId: this.opts.appId,
       channelId,
+      envSlug: filters?.environment,
       eventType: filters?.eventType,
       agentId: filters?.agentId,
     };
@@ -124,6 +128,7 @@ export class RealtimeClient {
       orgId: this.opts.orgId,
       appId: this.opts.appId,
       channelId,
+      envSlug: filters?.environment,
       eventType: filters?.eventType,
       agentId: filters?.agentId,
     });
@@ -133,10 +138,12 @@ export class RealtimeClient {
 
   publish(data: PublishData): void {
     this.requireOpen();
+    const envSlug = data.environment ?? this.opts.defaultEnvironment ?? "dev";
     const topic = buildPublishTopic({
       orgId: this.opts.orgId,
       appId: this.opts.appId,
       channelId: data.channelId,
+      envSlug,
       eventType: data.eventType ?? "custom",
       agentId: data.agentId ?? "_",
     });

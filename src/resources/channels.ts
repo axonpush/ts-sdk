@@ -3,7 +3,7 @@ import { type SSESubscribeOptions, SSESubscription } from "../realtime/sse.js";
 import type { components } from "../schema";
 import type { TransportClient } from "../transport.js";
 
-type Channel = components["schemas"]["Channel"];
+type Channel = components["schemas"]["ChannelResponseDto"];
 
 export interface ChannelsResourceContext {
   baseUrl: string;
@@ -19,33 +19,33 @@ export class ChannelsResource {
     private ctx: ChannelsResourceContext,
   ) {}
 
-  async create(name: string, appId: number): Promise<Channel | undefined> {
+  async create(name: string, appId: string): Promise<Channel | undefined> {
     const { data } = await this.api.POST("/channel", {
       body: { name, appId },
     });
     return data;
   }
 
-  async get(id: number): Promise<Channel | undefined> {
+  async get(id: string): Promise<Channel | undefined> {
     const { data } = await this.api.GET("/channel/{id}", {
       params: { path: { id } },
     });
     return data;
   }
 
-  async update(id: number): Promise<void> {
+  async update(id: string): Promise<void> {
     await this.api.PUT("/channel/{id}", {
       params: { path: { id } },
     });
   }
 
-  async delete(id: number): Promise<void> {
+  async delete(id: string): Promise<void> {
     await this.api.DELETE("/channel/{id}", {
       params: { path: { id } },
     });
   }
 
-  subscribe(channelId: number, opts?: SSESubscribeOptions): SSESubscription {
+  subscribe(channelId: string | number, opts?: SSESubscribeOptions): SSESubscription {
     return new SSESubscription({
       channelId,
       ...(opts ? { filters: opts } : {}),
@@ -54,12 +54,13 @@ export class ChannelsResource {
         headers: this.buildHeaders(opts?.environment),
         orgId: this.ctx.orgId,
         appId: this.ctx.appId,
+        ...(opts?.environment ? { defaultEnvironment: opts.environment } : {}),
       },
     });
   }
 
   subscribeToEvent(
-    channelId: number,
+    channelId: string | number,
     eventIdentifier: string,
     opts?: SSESubscribeOptions,
   ): SSESubscription {
@@ -72,6 +73,7 @@ export class ChannelsResource {
         headers: this.buildHeaders(opts?.environment),
         orgId: this.ctx.orgId,
         appId: this.ctx.appId,
+        ...(opts?.environment ? { defaultEnvironment: opts.environment } : {}),
       },
     });
   }

@@ -95,7 +95,17 @@ describe("RealtimeClient", () => {
     await vi.advanceTimersByTimeAsync(0);
 
     client.subscribe(42, { eventType: "agent.error" });
-    expect(fake.subscribed).toContain("axonpush/org_1/app_2/42/agent.error/+");
+    expect(fake.subscribed).toContain("axonpush/org_1/+/app_2/42/agent.error/+");
+  });
+
+  it("subscribe() with environment pins the env slug", async () => {
+    const fake = new FakeMqttClient();
+    const client = new RealtimeClient(buildOpts(fake));
+    await client.connect();
+    await vi.advanceTimersByTimeAsync(0);
+
+    client.subscribe(42, { environment: "prod", eventType: "agent.error" });
+    expect(fake.subscribed).toContain("axonpush/org_1/prod/app_2/42/agent.error/+");
   });
 
   it("subscribe() resubscribes on reconnect", async () => {
@@ -104,7 +114,7 @@ describe("RealtimeClient", () => {
     await client.connect();
     await vi.advanceTimersByTimeAsync(0);
     client.subscribe(1);
-    expect(fake.subscribed).toEqual(["axonpush/org_1/app_2/1/+/+"]);
+    expect(fake.subscribed).toEqual(["axonpush/org_1/+/app_2/1/+/+"]);
   });
 
   it("publish() calls client.publish with a serialized payload on the deterministic topic", async () => {
@@ -119,10 +129,11 @@ describe("RealtimeClient", () => {
       payload: { foo: "bar" },
       eventType: "custom",
       agentId: "agent-9",
+      environment: "staging",
     });
     expect(fake.published).toHaveLength(1);
     const [first] = fake.published;
-    expect(first?.topic).toBe("axonpush/org_1/app_2/7/custom/agent-9");
+    expect(first?.topic).toBe("axonpush/org_1/staging/app_2/7/custom/agent-9");
     const decoded = JSON.parse(first?.payload ?? "{}");
     expect(decoded.identifier).toBe("my-event");
     expect(decoded.payload.foo).toBe("bar");
@@ -136,7 +147,7 @@ describe("RealtimeClient", () => {
 
     const handler = vi.fn();
     client.onEvent(handler);
-    fake.emitMessage("axonpush/org_1/app_2/1/custom/_", { id: 1, identifier: "test" });
+    fake.emitMessage("axonpush/org_1/dev/app_2/1/custom/_", { id: 1, identifier: "test" });
     expect(handler).toHaveBeenCalledTimes(1);
     const [handlerCall] = handler.mock.calls;
     expect(handlerCall?.[0]).toMatchObject({ id: 1, identifier: "test" });

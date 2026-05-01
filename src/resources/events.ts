@@ -3,18 +3,19 @@ import type { components } from "../schema";
 import { getOrCreateTrace } from "../tracing.js";
 import type { TransportClient } from "../transport.js";
 
-type Event = components["schemas"]["Event"];
+type Event = components["schemas"]["EventResponseDto"];
+type EventIngestResponse = components["schemas"]["EventIngestResponseDto"];
 type CreateEventDto = components["schemas"]["CreateEventDto"];
 
-export type PublishParams = Omit<CreateEventDto, "channel_id"> & {
-  channelId: number;
+export type PublishParams = Omit<CreateEventDto, "channel_id" | "sync"> & {
+  channelId: string | number;
   environment?: string;
   sync?: boolean;
 };
 
 export interface EventQueryParams {
-  channelId?: number;
-  appId?: number;
+  channelId?: string | number;
+  appId?: string;
   environmentId?: string;
   eventType?: string | string[];
   agentId?: string;
@@ -41,7 +42,7 @@ export class EventsResource {
     private defaultEnvironment?: string,
   ) {}
 
-  async publish(params: PublishParams): Promise<Event | undefined> {
+  async publish(params: PublishParams): Promise<EventIngestResponse | undefined> {
     const trace = getOrCreateTrace(params.traceId);
     const spanId = params.spanId ?? trace.nextSpanId();
 
@@ -50,28 +51,30 @@ export class EventsResource {
       ? { headers: { "X-Axonpush-Environment": effectiveEnv } }
       : undefined;
 
+    const body: CreateEventDto = {
+      identifier: params.identifier,
+      payload: params.payload,
+      channel_id: String(params.channelId),
+      eventType: params.eventType ?? "custom",
+      sync: params.sync ?? false,
+      ...(params.agentId ? { agentId: params.agentId } : {}),
+      traceId: trace.traceId,
+      spanId,
+      ...(params.parentEventId ? { parentEventId: params.parentEventId } : {}),
+      ...(params.metadata ? { metadata: params.metadata } : {}),
+      ...(effectiveEnv ? { environment: effectiveEnv } : {}),
+    };
+
     const { data } = await this.api.POST("/event", {
-      body: {
-        identifier: params.identifier,
-        payload: params.payload,
-        channel_id: params.channelId,
-        agentId: params.agentId,
-        traceId: trace.traceId,
-        spanId,
-        parentEventId: params.parentEventId,
-        eventType: params.eventType ?? "custom",
-        metadata: params.metadata,
-        environment: effectiveEnv,
-        ...(params.sync ? { sync: true } : {}),
-      },
+      body,
       ...(init ? { init } : {}),
     });
     return data;
   }
 
-  async list(channelId: number, params: EventQueryParams = {}): Promise<EventListPage> {
+  async list(channelId: string | number, params: EventQueryParams = {}): Promise<EventListPage> {
     const merged: EventQueryParams = { ...params, channelId };
-    return this.runQuery("/event/{channelId}/list", { channelId }, merged);
+    return this.runQuery("/event/{channelId}/list", { channelId: String(channelId) }, merged);
   }
 
   async search(params: EventQueryParams = {}): Promise<EventListPage> {
@@ -80,7 +83,7 @@ export class EventsResource {
 
   private async runQuery(
     path: string,
-    pathParams: Record<string, number> | undefined,
+    pathParams: Record<string, string> | undefined,
     params: EventQueryParams,
   ): Promise<EventListPage> {
     const effectiveEnv = params.environment ?? currentEnvironment() ?? this.defaultEnvironment;

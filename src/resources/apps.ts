@@ -1,7 +1,7 @@
 import type { components } from "../schema";
 import type { TransportClient } from "../transport.js";
 
-type App = components["schemas"]["App"];
+type App = components["schemas"]["AppResponseDto"];
 
 export class AppsResource {
   constructor(
@@ -16,7 +16,7 @@ export class AppsResource {
     return data;
   }
 
-  async get(id: number): Promise<App | undefined> {
+  async get(id: string): Promise<App | undefined> {
     const { data } = await this.api.GET("/apps/{id}", {
       params: { path: { id } },
     });
@@ -28,14 +28,14 @@ export class AppsResource {
     return data ?? [];
   }
 
-  async update(id: number, name: string): Promise<void> {
+  async update(id: string, name: string): Promise<void> {
     await this.api.PATCH("/apps/{id}", {
       params: { path: { id } },
       body: { name },
     });
   }
 
-  async delete(id: number): Promise<void> {
+  async delete(id: string): Promise<void> {
     await this.api.DELETE("/apps/{id}", {
       params: { path: { id } },
     });

@@ -4,6 +4,7 @@ import { RealtimeClient } from "./realtime/mqtt.js";
 import { ApiKeysResource } from "./resources/api-keys.js";
 import { AppsResource } from "./resources/apps.js";
 import { ChannelsResource } from "./resources/channels.js";
+import { EnvironmentsResource } from "./resources/environments.js";
 import { EventsResource } from "./resources/events.js";
 import { TracesResource } from "./resources/traces.js";
 import { WebhooksResource } from "./resources/webhooks.js";
@@ -45,6 +46,7 @@ export class AxonPush {
   readonly events: EventsResource;
   readonly channels: ChannelsResource;
   readonly apps: AppsResource;
+  readonly environments: EnvironmentsResource;
   readonly traces: TracesResource;
   readonly webhooks: WebhooksResource;
   readonly apiKeys: ApiKeysResource;
@@ -102,6 +104,7 @@ export class AxonPush {
       appId: this.appId,
     });
     this.apps = new AppsResource(this.api, this.failOpen);
+    this.environments = new EnvironmentsResource(this.api, this.failOpen);
     this.traces = new TracesResource(this.api, this.failOpen);
     this.webhooks = new WebhooksResource(this.api, this.failOpen);
     this.apiKeys = new ApiKeysResource(this.api, this.failOpen);
@@ -122,6 +125,7 @@ export class AxonPush {
       headers,
       orgId: this.orgId,
       appId: this.appId,
+      ...(this.environment ? { defaultEnvironment: this.environment } : {}),
     });
   }
 

@@ -1,7 +1,7 @@
 import type { components } from "../schema";
 import type { TransportClient } from "../transport.js";
 
-type Event = components["schemas"]["Event"];
+type Event = components["schemas"]["EventResponseDto"];
 
 export class TracesResource {
   constructor(

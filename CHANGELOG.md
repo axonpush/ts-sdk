@@ -1,5 +1,44 @@
 # Changelog
 
+## 0.0.11
+
+### Breaking
+
+- **MQTT topic shape changed.** Topics now embed an environment slug between
+  the org and app segments:
+  - Before: `axonpush/{orgId}/{appId}/{channelId}/{eventType}/{agentId}`
+  - After:  `axonpush/{orgId}/{envSlug}/{appId}/{channelId}/{eventType}/{agentId}`
+
+  Subscribers wildcard the env slot (`+`) when no `environment` filter is
+  supplied. `RealtimeClient.publish()` falls back to `defaultEnvironment` (the
+  client-resolved environment) and finally to `"dev"` when no env is given.
+  `RealtimeClient.subscribe()` now accepts an `environment` filter alongside
+  `agentId` / `eventType` / `traceId`.
+
+- **Environments are org-level, not per-app.** The SDK now exposes a top-level
+  `client.environments` resource. Endpoints:
+  - `GET /environments` — `list()`
+  - `POST /environments` — `create({ name, slug?, color?, isProduction?, isDefault?, cloneFromEnvId? })`
+  - `PATCH /environments/:id` — `update(id, body)`
+  - `DELETE /environments/:id` — `delete(id)`
+  - `POST /environments/:id/promote-to-default` — `promoteToDefault(id)`
+
+  The previous per-app endpoint `GET /apps/:appId/environments` was removed
+  upstream and is no longer reachable from any SDK call.
+
+- **Schema regenerated.** `src/schema.d.ts` was regenerated from the new
+  OpenAPI document. Several response types were renamed to their `*ResponseDto`
+  forms (`App` → `AppResponseDto`, `Channel` → `ChannelResponseDto`, `Event` →
+  `EventResponseDto`, etc.). The re-exported `App`, `Channel`, `AxonEvent`,
+  `WebhookEndpoint`, `WebhookDelivery`, `ApiKey` aliases now point at the new
+  DTOs and a new `Environment` alias is exported.
+
+- **ID parameters are now strings.** The backend models entity IDs as UUID
+  strings. `apps.get/update/delete`, `channels.get/update/delete`, `apiKeys.revoke`,
+  `webhooks.deleteEndpoint/getDeliveries/listEndpoints` now take `string` ids.
+  `events.list(channelId)` and `events.publish({ channelId })` accept
+  `string | number`.
+
 ## 0.1.0
 
 ### Breaking

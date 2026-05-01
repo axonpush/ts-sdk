@@ -1,8 +1,8 @@
 import type { components } from "../schema";
 import type { TransportClient } from "../transport.js";
 
-type ApiKey = components["schemas"]["ApiKey"];
-type ApiKeyResponse = components["schemas"]["ApiKeyResponseDto"];
+type ApiKey = components["schemas"]["ApiKeyResponseDto"];
+type ApiKeyCreateResponse = components["schemas"]["ApiKeyCreateResponseDto"];
 type CreateApiKeyDto = components["schemas"]["CreateApiKeyDto"];
 
 export class ApiKeysResource {
@@ -11,7 +11,7 @@ export class ApiKeysResource {
     _failOpen: boolean,
   ) {}
 
-  async create(params: CreateApiKeyDto): Promise<ApiKeyResponse | undefined> {
+  async create(params: CreateApiKeyDto): Promise<ApiKeyCreateResponse | undefined> {
     const { data } = await this.api.POST("/api-keys", {
       body: params,
     });
@@ -23,7 +23,7 @@ export class ApiKeysResource {
     return data ?? [];
   }
 
-  async revoke(id: number): Promise<void> {
+  async revoke(id: string): Promise<void> {
     await this.api.DELETE("/api-keys/{id}", {
       params: { path: { id } },
     });

@@ -100,6 +100,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/auth/iot-credentials": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["IotCredentialsController_getCredentials"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/users/me": {
         parameters: {
             query?: never;
@@ -228,6 +244,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/organizations/{id}/members/{userId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["OrganizationController_removeMember"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/organizations/{id}/transfer-ownership": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["OrganizationController_transferOwnership"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/organizations/{id}/invitations/{invitationId}": {
         parameters: {
             query?: never;
@@ -239,6 +287,70 @@ export interface paths {
         put?: never;
         post?: never;
         delete: operations["OrganizationController_deleteInvitation"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/feature-flags/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["FeatureFlagsController_me"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/environments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["EnvironmentController_list"];
+        put?: never;
+        post: operations["EnvironmentController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/environments/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["EnvironmentController_remove"];
+        options?: never;
+        head?: never;
+        patch: operations["EnvironmentController_update"];
+        trace?: never;
+    };
+    "/environments/{id}/promote-to-default": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["EnvironmentController_promote"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -276,65 +388,33 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/apps": {
+    "/public-tokens": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get: operations["AppsController_getAllApps"];
+        get: operations["PublicIngestTokenController_list"];
         put?: never;
-        post: operations["AppsController_createApp"];
+        post: operations["PublicIngestTokenController_create"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/apps/{id}": {
+    "/public-tokens/{id}": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get: operations["AppsController_getApp"];
+        get?: never;
         put?: never;
         post?: never;
-        delete: operations["AppsController_deleteApp"];
-        options?: never;
-        head?: never;
-        patch: operations["AppsController_editApp"];
-        trace?: never;
-    };
-    "/channel/{channelId}/subscribe": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["ChannelController_subscribeToChannel"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/channel/{channelId}/{eventIdentifier}/subscribe": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["ChannelController_subscribeToEvent"];
-        put?: never;
-        post?: never;
-        delete?: never;
+        delete: operations["PublicIngestTokenController_revoke"];
         options?: never;
         head?: never;
         patch?: never;
@@ -418,6 +498,38 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/apps": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["AppsController_getAllApps"];
+        put?: never;
+        post: operations["AppsController_createApp"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apps/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["AppsController_getApp"];
+        put?: never;
+        post?: never;
+        delete: operations["AppsController_deleteApp"];
+        options?: never;
+        head?: never;
+        patch: operations["AppsController_editApp"];
         trace?: never;
     };
     "/webhooks/endpoints": {
@@ -589,10 +701,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /**
-         * OTLP/HTTP/JSON logs ingest
-         * @description OpenTelemetry-compatible log ingest endpoint. Accepts an OTLP LogsExportRequest envelope and stores each LogRecord as an `app.log` event row in the channel identified by the X-Axonpush-Channel header.
-         */
+        /** OTLP/HTTP logs ingest (protobuf or JSON) */
         post: operations["OtlpController_ingestLogs"];
         delete?: never;
         options?: never;
@@ -609,11 +718,217 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /**
-         * OTLP/HTTP/JSON traces ingest
-         * @description OpenTelemetry-compatible trace ingest endpoint. Accepts an OTLP TracesExportRequest envelope and stores each Span as an `app.span` event row in the channel identified by the X-Axonpush-Channel header.
-         */
+        /** OTLP/HTTP traces ingest (protobuf or JSON) */
         post: operations["OtlpController_ingestTraces"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/health": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["HealthController_check"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/organizations/{orgId}/releases": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ReleaseController_list"];
+        put?: never;
+        post: operations["ReleaseController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/releases/{version}/artifacts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ReleaseController_uploadArtifact"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/{projectId}/envelope": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Sentry-compatible envelope ingest */
+        post: operations["SentryController_ingestEnvelope"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/{projectId}/store": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["SentryController_ingestStore"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/{projectId}/security": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["SentryController_ingestSecurity"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/{projectId}/minidump": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["SentryController_ingestMinidump"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/sso/connections": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["SsoController_getConnections"];
+        put?: never;
+        post: operations["SsoController_createConnection"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/sso/connections/{clientID}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["SsoController_deleteConnection"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/sso/enforcement": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["SsoController_toggleEnforcement"];
+        trace?: never;
+    };
+    "/auth/sso/authorize": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["SsoController_authorize"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/sso/callback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["SsoController_callback"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/sso/acs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["SsoController_samlAcs"];
         delete?: never;
         options?: never;
         head?: never;
@@ -640,13 +955,33 @@ export interface components {
             orgCreateProps?: components["schemas"]["CreateOrganizationDto"];
             invitationCode?: string;
         };
+        UserResponseDto: {
+            id: string;
+            first_name: string;
+            last_name: string;
+            email: string;
+            username: string;
+            googleId: string | null;
+            roles: ("user" | "admin" | "owner")[];
+            organizationId: string | null;
+            deletedAt?: string | null;
+        };
         SignInDto: {
             email: string;
             password: string;
         };
+        AuthTokensResponseDto: {
+            access_token: string;
+            refresh_token: string;
+        };
         GoogleAuthDto: {
             code?: string;
             idToken?: string;
+        };
+        GoogleAuthResponseDto: {
+            access_token: string;
+            refresh_token: string;
+            needsOrg?: boolean;
         };
         SetupOrgDto: {
             /** @enum {string} */
@@ -657,128 +992,154 @@ export interface components {
         RefreshTokenDto: {
             refresh_token: string;
         };
-        UserResponseDto: {
-            id: number;
-            first_name: string;
-            last_name: string;
-            email: string;
-            username: string;
-            googleId: string | null;
-            roles: ("user" | "admin")[];
-            organizationId: number;
-            /** Format: date-time */
-            deletedAt?: string | null;
+        IotCredentialsResponseDto: {
+            endpoint: string;
+            presignedWssUrl: string;
+            expiresAt: string;
+            topicPrefix: string;
+            clientId: string;
+            region: string;
         };
         UpdateProfileDto: {
             first_name?: string;
             last_name?: string;
         };
-        Event: {
-            id: number;
-            identifier: string;
-            payload: Record<string, never>;
-            agentId: string;
-            traceId: string;
-            spanId: string;
-            parentEventId: number;
-            /** @enum {string} */
-            eventType: "agent.start" | "agent.end" | "agent.message" | "agent.tool_call.start" | "agent.tool_call.end" | "agent.error" | "agent.handoff" | "agent.llm.token" | "agent.log" | "app.log" | "app.span" | "custom";
-            metadata: Record<string, never>;
-            channel: components["schemas"]["Channel"];
-            /** Format: date-time */
-            createdAt: string;
-            /** Format: date-time */
-            updatedAt: string;
-        };
-        Channel: {
-            id: number;
-            name: string;
-            app: components["schemas"]["App"];
-            events: components["schemas"]["Event"][];
-            /** Format: date-time */
-            createdAt: string;
-            /** Format: date-time */
-            updatedAt: string;
-            /** Format: date-time */
-            deletedAt?: string;
-        };
-        App: {
-            id: number;
-            name: string;
-            creator: components["schemas"]["User"];
-            organization: components["schemas"]["Organization"];
-            organizationId: number;
-            channels: components["schemas"]["Channel"][];
-            /** Format: date-time */
-            createdAt: string;
-            /** Format: date-time */
-            updatedAt: string;
-            /** Format: date-time */
-            deletedAt?: string;
-        };
-        Invitation: {
-            id: number;
-            code: string;
+        InvitationResponseDto: {
+            id: string;
+            invitationId: string;
+            orgId: string;
             invitedEmail: string;
-            /** @enum {string} */
-            invite_role: "user" | "admin";
-            /** @enum {string} */
-            status: "pending" | "accepted" | "expired";
-            organization: components["schemas"]["Organization"];
-            organizationId: number;
+            role: string;
+            inviteRole?: string;
+            code?: string;
+            status: string;
+            expiresAt?: string;
+            acceptedAt?: string;
+            createdAt: string;
+            updatedAt?: string;
         };
-        UserOrganization: {
-            id: number;
-            user: components["schemas"]["User"];
-            userId: number;
-            organization: components["schemas"]["Organization"];
-            organizationId: number;
-            /** @enum {string} */
-            role: "user" | "admin";
-            /** Format: date-time */
-            joinedAt: string;
-            /** Format: date-time */
-            deletedAt?: string;
-        };
-        Organization: {
-            id: number;
-            slug: string;
+        EnvironmentResponseDto: {
+            id: string;
+            environmentId: string;
+            orgId: string;
             name: string;
-            description: string;
-            users: components["schemas"]["User"][];
-            apps: components["schemas"]["App"][];
-            invitations: components["schemas"]["Invitation"][];
-            memberships: components["schemas"]["UserOrganization"][];
-            /** Format: date-time */
+            slug: string;
+            color?: string;
+            isDefault?: boolean;
+            isProduction?: boolean;
+            isEphemeral?: boolean;
+            expiresAt?: string;
+            createdAt: string;
+            updatedAt?: string;
             deletedAt?: string;
         };
-        User: {
-            id: number;
-            first_name: string;
-            last_name: string;
-            email: string;
-            username: string;
-            googleId: string;
-            roles: ("user" | "admin")[];
-            organization: components["schemas"]["Organization"];
-            organizationId: number;
-            createdApps: components["schemas"]["App"][];
-            memberships: components["schemas"]["UserOrganization"][];
-            /** Format: date-time */
+        OrganizationResponseDto: {
+            id: string;
+            orgId: string;
+            name: string;
+            slug: string;
+            description?: string;
+            plan: string;
+            ssoEnforced: boolean;
+            eventsQuotaUsedCurrent: number;
+            eventsQuotaMonthly?: number;
+            retentionDays?: number;
+            seatLimit?: number;
+            lemonsqueezySubscriptionId?: string;
+            lemonsqueezyCustomerId?: string;
+            ssoConnectionId?: string;
+            createdAt: string;
+            updatedAt?: string;
             deletedAt?: string;
+            invitations?: components["schemas"]["InvitationResponseDto"][];
+            environments?: components["schemas"]["EnvironmentResponseDto"][];
+        };
+        UserOrganizationWithOrgResponseDto: {
+            userId: string;
+            orgId: string;
+            role: string;
+            joinedAt: string;
+            deletedAt?: string;
+            organization?: components["schemas"]["OrganizationResponseDto"] | null;
         };
         SwitchOrgDto: {
-            organizationId: number;
+            organizationId: string;
+        };
+        SwitchActiveOrgResponseDto: {
+            access_token: string;
+            refresh_token: string;
+            user?: components["schemas"]["UserResponseDto"];
+        };
+        MessageResponseDto: {
+            message: string;
+        };
+        OrganizationCreateResponseDto: {
+            id: string;
+            orgId: string;
+            name: string;
+            slug: string;
+            description?: string;
+            plan: string;
+            ssoEnforced: boolean;
+            eventsQuotaUsedCurrent: number;
+            eventsQuotaMonthly?: number;
+            retentionDays?: number;
+            seatLimit?: number;
+            lemonsqueezySubscriptionId?: string;
+            lemonsqueezyCustomerId?: string;
+            ssoConnectionId?: string;
+            createdAt: string;
+            updatedAt?: string;
+            deletedAt?: string;
+            invitations?: components["schemas"]["InvitationResponseDto"][];
+            environments?: components["schemas"]["EnvironmentResponseDto"][];
+            access_token: string;
+            refresh_token: string;
+        };
+        OkResponseDto: {
+            ok: boolean;
         };
         CreateInvitationDto: {
             invitedEmail: string;
             /** @enum {string} */
             desired_role: "user" | "admin";
         };
+        SuccessResponseDto: {
+            success: boolean;
+        };
+        TransferOwnershipDto: {
+            userId: string;
+        };
+        FeatureFlagsResponseDto: {
+            billing: boolean;
+            environments: boolean;
+            sentryIngest: boolean;
+            asyncIngest: boolean;
+        };
+        CreateEnvironmentDto: {
+            name: string;
+            slug?: string;
+            color?: string;
+            isProduction?: boolean;
+            isDefault?: boolean;
+            cloneFromEnvId?: string;
+        };
+        UpdateEnvironmentDto: {
+            name?: string;
+            color?: string;
+            requireConfirmationForDestructive?: boolean;
+        };
         CreateApiKeyDto: {
             name: string;
-            organizationId: number;
-            appId?: number;
+            organizationId: string;
+            appId?: string;
+            /** @description Environment this key is bound to. All events published with this key will be tagged with this environment (unless allowEnvironmentOverride=true and the request specifies a different one). */
+            environmentId?: string;
+            /**
+             * @description When true, the caller may override the env via X-Axonpush-Environment header or the event.environment field. Defaults to false for safety.
+             * @default false
+             */
+            allowEnvironmentOverride: boolean;
             /**
              * @default [
              *       "publish",
@@ -787,93 +1148,309 @@ export interface components {
              */
             scopes: ("publish" | "subscribe" | "events:read" | "traces:read" | "apps:manage" | "channels:manage" | "webhooks:manage")[];
         };
-        ApiKeyResponseDto: {
-            id: number;
+        ApiKeyCreateResponseDto: {
+            id: string;
+            apiKeyId: string;
+            orgId: string;
+            appId?: string;
+            environmentId?: string;
             name: string;
-            prefix: string;
+            scopes: ("publish" | "subscribe" | "events:read" | "traces:read" | "apps:manage" | "channels:manage" | "webhooks:manage")[];
+            allowEnvironmentOverride: boolean;
+            prefix?: string;
+            lastUsedAt?: string;
+            createdAt: string;
+            updatedAt?: string;
+            revokedAt?: string;
             /** @description Raw API key, only returned at creation time */
             key: string;
+        };
+        ApiKeyResponseDto: {
+            id: string;
+            apiKeyId: string;
+            orgId: string;
+            appId?: string;
+            environmentId?: string;
+            name: string;
             scopes: ("publish" | "subscribe" | "events:read" | "traces:read" | "apps:manage" | "channels:manage" | "webhooks:manage")[];
-            /** Format: date-time */
+            allowEnvironmentOverride: boolean;
+            prefix?: string;
+            lastUsedAt?: string;
             createdAt: string;
+            updatedAt?: string;
+            revokedAt?: string;
         };
-        ApiKey: {
-            id: number;
+        CreatePublicTokenDto: {
             name: string;
-            prefix: string;
-            hashedKey: string;
-            app: components["schemas"]["App"];
-            appId: number;
-            organization: components["schemas"]["Organization"];
-            organizationId: number;
-            scopes: string[];
-            createdBy: components["schemas"]["User"];
-            createdById: number;
-            active: boolean;
-            /** Format: date-time */
+            channelId: string;
+            environmentId: string;
+        };
+        PublicIngestTokenCreateResponseDto: {
+            id: string;
+            tokenId: string;
+            orgId: string;
+            appId?: string;
+            channelId?: string;
+            environmentId?: string;
+            name: string;
+            scopes?: string[];
+            prefix?: string;
+            lastUsedAt?: string;
             createdAt: string;
-            /** Format: date-time */
-            lastUsedAt: string;
+            revokedAt?: string;
+            /** @description Raw token, only returned at creation time */
+            token: string;
         };
-        CreateAppDto: {
+        PublicIngestTokenResponseDto: {
+            id: string;
+            tokenId: string;
+            orgId: string;
+            appId?: string;
+            channelId?: string;
+            environmentId?: string;
             name: string;
+            scopes?: string[];
+            prefix?: string;
+            lastUsedAt?: string;
+            createdAt: string;
+            revokedAt?: string;
+        };
+        ChannelResponseDto: {
+            id: string;
+            channelId: string;
+            orgId: string;
+            appId: string;
+            name: string;
+            createdAt: string;
+            updatedAt?: string;
+            deletedAt?: string;
+            app?: components["schemas"]["AppResponseDto"];
+        };
+        AppResponseDto: {
+            id: string;
+            appId: string;
+            orgId: string;
+            name: string;
+            creatorUserId?: string;
+            createdAt: string;
+            updatedAt?: string;
+            deletedAt?: string;
+            channels?: components["schemas"]["ChannelResponseDto"][];
         };
         createChannelDto: {
             name: string;
-            appId: number;
+            appId: string;
         };
         CreateEventDto: {
             identifier: string;
             payload: Record<string, never>;
-            channel_id: number;
+            channel_id: string;
             agentId?: string;
             traceId?: string;
             spanId?: string;
-            parentEventId?: number;
+            parentEventId?: string;
             /**
              * @default custom
              * @enum {string}
              */
             eventType: "agent.start" | "agent.end" | "agent.message" | "agent.tool_call.start" | "agent.tool_call.end" | "agent.error" | "agent.handoff" | "agent.llm.token" | "agent.log" | "app.log" | "app.span" | "custom";
             metadata?: Record<string, never>;
+            /** @description Environment slug override. Only honored when the API key has allowEnvironmentOverride=true. */
+            environment?: string;
+            /**
+             * @description When true, wait for the event to be persisted to the DB before returning. Use only for audit-critical calls — the default async path returns in under a millisecond.
+             * @default false
+             */
+            sync: boolean;
+        };
+        EventIngestResponseDto: {
+            eventId: string;
+            identifier: string;
+            dedupKey: string;
+            createdAt: string;
+            queued: boolean;
+            duplicate?: boolean;
+            environmentId?: string | null;
+        };
+        EventResponseDto: {
+            id: string;
+            eventId: string;
+            orgId: string;
+            appId: string;
+            channelId: string;
+            environmentId?: string;
+            eventType: string;
+            agentId?: string;
+            traceId?: string;
+            spanId?: string;
+            parentEventId?: string;
+            identifier?: string;
+            payload?: {
+                [key: string]: unknown;
+            };
+            metadata?: {
+                [key: string]: unknown;
+            };
+            createdAt: string;
+            updatedAt?: string;
+            ttl?: number;
+        };
+        EventListMetaDto: {
+            hasMore: boolean;
+            cursor?: string | null;
+        };
+        EventListResponseDto: {
+            data: components["schemas"]["EventResponseDto"][];
+            meta: components["schemas"]["EventListMetaDto"];
+        };
+        CreateAppDto: {
+            name: string;
         };
         CreateWebhookEndpointDto: {
             url: string;
-            channelId: number;
+            channelId: string;
             secret?: string;
             /** @description Event types to filter (null = all) */
             eventTypes?: string[];
             description?: string;
         };
-        WebhookEndpoint: {
-            id: number;
+        WebhookEndpointCreateResponseDto: {
+            id: string;
+            endpointId: string;
+            orgId?: string;
+            channelId: string;
             url: string;
-            secret: string;
-            channel: components["schemas"]["Channel"];
-            channelId: number;
-            eventTypes: string[];
-            active: boolean;
-            description: string;
-            /** Format: date-time */
+            eventTypes?: string[];
+            signingSecretPrefix?: string;
+            hasSecret?: boolean;
+            description?: string;
+            isActive: boolean;
             createdAt: string;
-            /** Format: date-time */
-            updatedAt: string;
+            updatedAt?: string;
+            deletedAt?: string;
+            /** @description Raw signing secret, only returned at creation time */
+            rawSecret?: string;
+            /** @description Prefix of the signing secret */
+            secretPrefix?: string | null;
         };
-        WebhookDelivery: {
-            id: number;
-            endpoint: components["schemas"]["WebhookEndpoint"];
-            endpointId: number;
-            eventId: number;
+        WebhookEndpointResponseDto: {
+            id: string;
+            endpointId: string;
+            orgId?: string;
+            channelId: string;
+            url: string;
+            eventTypes?: string[];
+            signingSecretPrefix?: string;
+            hasSecret?: boolean;
+            description?: string;
+            isActive: boolean;
+            createdAt: string;
+            updatedAt?: string;
+            deletedAt?: string;
+        };
+        WebhookDeliveryResponseDto: {
+            id: string;
+            deliveryId: string;
+            endpointId: string;
+            eventId: string;
             /** @enum {string} */
             status: "pending" | "success" | "failed" | "retrying";
+            statusCode?: number;
+            responseBody?: string;
             attempts: number;
-            statusCode: number;
-            responseBody: string;
-            error: string;
-            /** Format: date-time */
-            nextRetryAt: string;
-            /** Format: date-time */
+            lastAttemptAt?: string;
+            nextAttemptAt?: string;
+            error?: string;
             createdAt: string;
+        };
+        WebhookIngestResponseDto: {
+            status: string;
+            eventId: string;
+        };
+        AuditLogActorDto: {
+            id: string;
+            first_name?: string;
+            last_name?: string;
+            email?: string;
+            username?: string;
+        };
+        AuditLogResponseDto: {
+            id: string;
+            auditId: string;
+            organizationId?: string;
+            orgId?: string;
+            actorId?: string | null;
+            action: string;
+            resourceType: string;
+            resourceId?: string;
+            metadata?: {
+                [key: string]: unknown;
+            } | null;
+            ipAddress?: string | null;
+            actor?: components["schemas"]["AuditLogActorDto"] | null;
+            createdAt: string;
+        };
+        AuditLogListMetaDto: {
+            total: number;
+            page: number;
+            limit: number;
+            totalPages: number;
+        };
+        AuditLogListResponseDto: {
+            data: components["schemas"]["AuditLogResponseDto"][];
+            meta: components["schemas"]["AuditLogListMetaDto"];
+        };
+        HealthResponseDto: {
+            status: string;
+            timestamp: string;
+            flags: {
+                [key: string]: unknown;
+            };
+        };
+        CreateReleaseDto: {
+            version: string;
+            projects?: string[];
+            dateReleased?: string;
+        };
+        ReleaseResponseDto: {
+            orgId: string;
+            version: string;
+            projects?: string;
+            dateCreated: string;
+            dateReleased?: string;
+            firstEventAt?: string;
+            lastEventAt?: string;
+        };
+        ReleaseArtifactResponseDto: {
+            orgId: string;
+            version: string;
+            artifactId: string;
+            name: string;
+            contentType?: string;
+            sizeBytes: number;
+            storagePath: string;
+            sha256?: string;
+            createdAt: string;
+        };
+        SsoConnectionResponseDto: {
+            clientID: string;
+            tenant?: string;
+            product?: string;
+            defaultRedirectUrl?: string;
+            redirectUrl?: string[];
+        };
+        ToggleEnforcementDto: {
+            enforced: boolean;
+        };
+        SsoEnforcementResponseDto: {
+            ok: boolean;
+            enforced: boolean;
+        };
+        SsoAuthorizeResponseDto: {
+            redirect_url: string;
+        };
+        SsoCallbackDto: {
+            code: string;
         };
     };
     responses: never;
@@ -921,7 +1498,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": Record<string, never>;
+                    "application/json": components["schemas"]["UserResponseDto"];
                 };
             };
         };
@@ -939,6 +1516,14 @@ export interface operations {
             };
         };
         responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuthTokensResponseDto"];
+                };
+            };
             201: {
                 headers: {
                     [name: string]: unknown;
@@ -960,6 +1545,14 @@ export interface operations {
             };
         };
         responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GoogleAuthResponseDto"];
+                };
+            };
             201: {
                 headers: {
                     [name: string]: unknown;
@@ -983,6 +1576,14 @@ export interface operations {
             };
         };
         responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuthTokensResponseDto"];
+                };
+            };
             201: {
                 headers: {
                     [name: string]: unknown;
@@ -1004,11 +1605,38 @@ export interface operations {
             };
         };
         responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuthTokensResponseDto"];
+                };
+            };
             201: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    IotCredentialsController_getCredentials: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IotCredentialsResponseDto"];
+                };
             };
         };
     };
@@ -1068,7 +1696,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["UserOrganization"][];
+                    "application/json": components["schemas"]["UserOrganizationWithOrgResponseDto"][];
                 };
             };
         };
@@ -1090,7 +1718,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["SwitchActiveOrgResponseDto"];
+                };
             };
         };
     };
@@ -1118,7 +1748,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: number;
+                id: string;
             };
             cookie?: never;
         };
@@ -1139,7 +1769,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: number;
+                id: string;
             };
             cookie?: never;
         };
@@ -1149,7 +1779,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["MessageResponseDto"];
+                };
             };
         };
     };
@@ -1167,7 +1799,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Organization"][];
+                    "application/json": components["schemas"]["OrganizationResponseDto"][];
                 };
             };
         };
@@ -1189,7 +1821,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["OrganizationCreateResponseDto"];
+                };
             };
         };
     };
@@ -1198,7 +1832,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: number;
+                id: string;
             };
             cookie?: never;
         };
@@ -1209,7 +1843,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Organization"];
+                    "application/json": components["schemas"]["OrganizationResponseDto"];
                 };
             };
         };
@@ -1219,7 +1853,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: number;
+                id: string;
             };
             cookie?: never;
         };
@@ -1229,7 +1863,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["OkResponseDto"];
+                };
             };
         };
     };
@@ -1238,7 +1874,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: number;
+                id: string;
             };
             cookie?: never;
         };
@@ -1252,7 +1888,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["OkResponseDto"];
+                };
             };
         };
     };
@@ -1261,7 +1899,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: number;
+                id: string;
             };
             cookie?: never;
         };
@@ -1276,18 +1914,18 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Invitation"];
+                    "application/json": components["schemas"]["InvitationResponseDto"];
                 };
             };
         };
     };
-    OrganizationController_deleteInvitation: {
+    OrganizationController_removeMember: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                id: number;
-                invitationId: number;
+                id: string;
+                userId: string;
             };
             cookie?: never;
         };
@@ -1297,7 +1935,198 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
+                content: {
+                    "application/json": components["schemas"]["SuccessResponseDto"];
+                };
+            };
+        };
+    };
+    OrganizationController_transferOwnership: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TransferOwnershipDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuccessResponseDto"];
+                };
+            };
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
                 content?: never;
+            };
+        };
+    };
+    OrganizationController_deleteInvitation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                invitationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuccessResponseDto"];
+                };
+            };
+        };
+    };
+    FeatureFlagsController_me: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FeatureFlagsResponseDto"];
+                };
+            };
+        };
+    };
+    EnvironmentController_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvironmentResponseDto"][];
+                };
+            };
+        };
+    };
+    EnvironmentController_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateEnvironmentDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvironmentResponseDto"];
+                };
+            };
+        };
+    };
+    EnvironmentController_remove: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OkResponseDto"];
+                };
+            };
+        };
+    };
+    EnvironmentController_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateEnvironmentDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvironmentResponseDto"];
+                };
+            };
+        };
+    };
+    EnvironmentController_promote: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvironmentResponseDto"];
+                };
+            };
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
             };
         };
     };
@@ -1315,7 +2144,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ApiKey"][];
+                    "application/json": components["schemas"]["ApiKeyResponseDto"][];
                 };
             };
         };
@@ -1338,7 +2167,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ApiKeyResponseDto"];
+                    "application/json": components["schemas"]["ApiKeyCreateResponseDto"];
                 };
             };
         };
@@ -1348,7 +2177,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: number;
+                id: string;
             };
             cookie?: never;
         };
@@ -1358,7 +2187,224 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["MessageResponseDto"];
+                };
+            };
+        };
+    };
+    PublicIngestTokenController_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicIngestTokenResponseDto"][];
+                };
+            };
+        };
+    };
+    PublicIngestTokenController_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreatePublicTokenDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicIngestTokenCreateResponseDto"];
+                };
+            };
+        };
+    };
+    PublicIngestTokenController_revoke: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OkResponseDto"];
+                };
+            };
+        };
+    };
+    ChannelController_getChannel: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChannelResponseDto"];
+                };
+            };
+        };
+    };
+    ChannelController_updateChannel: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OkResponseDto"];
+                };
+            };
+        };
+    };
+    ChannelController_deleteChannel: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OkResponseDto"];
+                };
+            };
+        };
+    };
+    ChannelController_createChannel: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["createChannelDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChannelResponseDto"];
+                };
+            };
+        };
+    };
+    EventController_createEvent: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Stripe-style client-supplied idempotency key (1–255 ASCII-printable chars). Cached response replay for retried requests. */
+                "Idempotency-Key"?: string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateEventDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EventIngestResponseDto"];
+                };
+            };
+        };
+    };
+    EventController_listEvents: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                channelId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EventListResponseDto"];
+                };
+            };
+        };
+    };
+    EventsSearchController_search: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EventListResponseDto"];
+                };
             };
         };
     };
@@ -1376,7 +2422,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["App"][];
+                    "application/json": components["schemas"]["AppResponseDto"][];
                 };
             };
         };
@@ -1399,7 +2445,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["App"];
+                    "application/json": components["schemas"]["AppResponseDto"];
                 };
             };
         };
@@ -1409,7 +2455,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: number;
+                id: string;
             };
             cookie?: never;
         };
@@ -1420,7 +2466,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["App"];
+                    "application/json": components["schemas"]["AppResponseDto"];
                 };
             };
         };
@@ -1430,7 +2476,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: number;
+                id: string;
             };
             cookie?: never;
         };
@@ -1440,7 +2486,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["OkResponseDto"];
+                };
             };
         };
     };
@@ -1449,7 +2497,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: number;
+                id: string;
             };
             cookie?: never;
         };
@@ -1463,236 +2511,8 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
-            };
-        };
-    };
-    ChannelController_subscribeToChannel: {
-        parameters: {
-            query: {
-                agentId: string;
-                eventType: string;
-                traceId: string;
-            };
-            header?: never;
-            path: {
-                channelId: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    ChannelController_subscribeToEvent: {
-        parameters: {
-            query: {
-                agentId: string;
-                eventType: string;
-                traceId: string;
-            };
-            header?: never;
-            path: {
-                channelId: number;
-                eventIdentifier: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    ChannelController_getChannel: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
                 content: {
-                    "application/json": components["schemas"]["Channel"];
-                };
-            };
-        };
-    };
-    ChannelController_updateChannel: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    ChannelController_deleteChannel: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    ChannelController_createChannel: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["createChannelDto"];
-            };
-        };
-        responses: {
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Channel"];
-                };
-            };
-        };
-    };
-    EventController_createEvent: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CreateEventDto"];
-            };
-        };
-        responses: {
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Event"];
-                };
-            };
-        };
-    };
-    EventController_listEvents: {
-        parameters: {
-            query?: {
-                page?: number;
-                limit?: number;
-                /** @description Lucene query filtering JSONB payload. Examples: severityNumber:>=17, body:/timeout/, resource.service.name:api */
-                q?: string;
-                /** @description ISO timestamp — earliest createdAt to include */
-                since?: string;
-                /** @description ISO timestamp — latest createdAt to include */
-                until?: string;
-                /** @description Convenience filter on eventType prefix */
-                source?: "agent" | "app" | "all";
-            };
-            header?: never;
-            path: {
-                channelId: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        data: components["schemas"]["Event"][];
-                        meta: {
-                            total: number;
-                            page: number;
-                            limit: number;
-                            totalPages: number;
-                        };
-                    };
-                };
-            };
-        };
-    };
-    EventsSearchController_search: {
-        parameters: {
-            query?: {
-                page?: number;
-                limit?: number;
-                /** @description Lucene query filtering JSONB payload. Examples: severityNumber:>=17, body:/timeout/, resource.service.name:api */
-                q?: string;
-                /** @description ISO timestamp — earliest createdAt to include */
-                since?: string;
-                /** @description ISO timestamp — latest createdAt to include */
-                until?: string;
-                /** @description Convenience filter on eventType prefix */
-                source?: "agent" | "app" | "all";
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        data: components["schemas"]["Event"][];
-                        meta: {
-                            total: number;
-                            page: number;
-                            limit: number;
-                            totalPages: number;
-                        };
-                    };
+                    "application/json": components["schemas"]["OkResponseDto"];
                 };
             };
         };
@@ -1715,7 +2535,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["WebhookEndpoint"];
+                    "application/json": components["schemas"]["WebhookEndpointCreateResponseDto"];
                 };
             };
         };
@@ -1725,7 +2545,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                channelId: number;
+                channelId: string;
             };
             cookie?: never;
         };
@@ -1736,7 +2556,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["WebhookEndpoint"][];
+                    "application/json": components["schemas"]["WebhookEndpointResponseDto"][];
                 };
             };
         };
@@ -1746,26 +2566,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    WebhookController_getDeliveries: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                endpointId: number;
+                id: string;
             };
             cookie?: never;
         };
@@ -1776,7 +2577,28 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["WebhookDelivery"][];
+                    "application/json": components["schemas"]["MessageResponseDto"];
+                };
+            };
+        };
+    };
+    WebhookController_getDeliveries: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                endpointId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WebhookDeliveryResponseDto"][];
                 };
             };
         };
@@ -1788,7 +2610,7 @@ export interface operations {
                 "x-webhook-signature": string;
             };
             path: {
-                endpointId: number;
+                endpointId: string;
             };
             cookie?: never;
         };
@@ -1798,7 +2620,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["WebhookIngestResponseDto"];
+                };
             };
         };
     };
@@ -1807,6 +2631,8 @@ export interface operations {
             query?: {
                 page?: number;
                 limit?: number;
+                appId?: string;
+                environment?: string;
             };
             header?: never;
             path?: never;
@@ -1836,10 +2662,9 @@ export interface operations {
                             handoffCount: number;
                         }[];
                         meta: {
-                            total: number;
                             page: number;
                             limit: number;
-                            totalPages: number;
+                            hasMore: boolean;
                         };
                     };
                 };
@@ -1848,7 +2673,10 @@ export interface operations {
     };
     TraceController_getDashboardStats: {
         parameters: {
-            query?: never;
+            query?: {
+                appId?: string;
+                environment?: string;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -1881,7 +2709,10 @@ export interface operations {
     };
     TraceController_getTraceEvents: {
         parameters: {
-            query?: never;
+            query?: {
+                appId?: string;
+                environment?: string;
+            };
             header?: never;
             path: {
                 traceId: string;
@@ -1896,14 +2727,17 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Event"][];
+                    "application/json": components["schemas"]["EventResponseDto"][];
                 };
             };
         };
     };
     TraceController_getTraceSummary: {
         parameters: {
-            query?: never;
+            query?: {
+                appId?: string;
+                environment?: string;
+            };
             header?: never;
             path: {
                 traceId: string;
@@ -1943,7 +2777,7 @@ export interface operations {
                 limit?: number;
                 action?: string;
                 resourceType?: string;
-                actorId?: number;
+                actorId?: string;
                 from?: string;
                 to?: string;
             };
@@ -1959,35 +2793,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        data: {
-                            id: number;
-                            organizationId?: number;
-                            actorId?: number | null;
-                            action: string;
-                            resourceType: string;
-                            resourceId: string;
-                            metadata?: {
-                                [key: string]: unknown;
-                            } | null;
-                            ipAddress?: string | null;
-                            actor?: {
-                                id?: number;
-                                first_name?: string;
-                                last_name?: string;
-                                email?: string;
-                                username?: string;
-                            } | null;
-                            /** Format: date-time */
-                            createdAt: string;
-                        }[];
-                        meta: {
-                            total: number;
-                            page: number;
-                            limit: number;
-                            totalPages: number;
-                        };
-                    };
+                    "application/json": components["schemas"]["AuditLogListResponseDto"];
                 };
             };
         };
@@ -1997,27 +2803,21 @@ export interface operations {
             query?: never;
             header: {
                 "x-axonpush-channel": string;
-                /** @description Numeric ID of the channel that should receive these events */
-                "X-Axonpush-Channel": string;
+                "x-axonpush-environment": string;
+                "Idempotency-Key"?: string;
+                "X-Axonpush-Environment"?: string;
+                "X-Axonpush-Channel"?: string;
             };
             path?: never;
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description Empty object on full success, or `{partialSuccess: {rejectedLogRecords, errorMessage}}` if some records failed. */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content: {
-                    "application/json": {
-                        partialSuccess?: {
-                            rejectedLogRecords?: number;
-                            errorMessage?: string;
-                        };
-                    };
-                };
+                content?: never;
             };
             201: {
                 headers: {
@@ -2034,27 +2834,21 @@ export interface operations {
             query?: never;
             header: {
                 "x-axonpush-channel": string;
-                /** @description Numeric ID of the channel that should receive these events */
-                "X-Axonpush-Channel": string;
+                "x-axonpush-environment": string;
+                "Idempotency-Key"?: string;
+                "X-Axonpush-Environment"?: string;
+                "X-Axonpush-Channel"?: string;
             };
             path?: never;
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description Empty object on full success, or `{partialSuccess: {rejectedSpans, errorMessage}}` if some spans failed. */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content: {
-                    "application/json": {
-                        partialSuccess?: {
-                            rejectedSpans?: number;
-                            errorMessage?: string;
-                        };
-                    };
-                };
+                content?: never;
             };
             201: {
                 headers: {
@@ -2063,6 +2857,314 @@ export interface operations {
                 content: {
                     "application/json": Record<string, never>;
                 };
+            };
+        };
+    };
+    HealthController_check: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HealthResponseDto"];
+                };
+            };
+        };
+    };
+    ReleaseController_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                orgId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReleaseResponseDto"][];
+                };
+            };
+        };
+    };
+    ReleaseController_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                orgId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateReleaseDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReleaseResponseDto"];
+                };
+            };
+        };
+    };
+    ReleaseController_uploadArtifact: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                version: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReleaseArtifactResponseDto"];
+                };
+            };
+        };
+    };
+    SentryController_ingestEnvelope: {
+        parameters: {
+            query?: never;
+            header: {
+                "content-encoding": string;
+            };
+            path: {
+                projectId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    SentryController_ingestStore: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                projectId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    SentryController_ingestSecurity: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                projectId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    SentryController_ingestMinidump: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                projectId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    SsoController_getConnections: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SsoConnectionResponseDto"][];
+                };
+            };
+        };
+    };
+    SsoController_createConnection: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SsoConnectionResponseDto"];
+                };
+            };
+        };
+    };
+    SsoController_deleteConnection: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                clientID: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OkResponseDto"];
+                };
+            };
+        };
+    };
+    SsoController_toggleEnforcement: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ToggleEnforcementDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SsoEnforcementResponseDto"];
+                };
+            };
+        };
+    };
+    SsoController_authorize: {
+        parameters: {
+            query?: {
+                email?: string;
+                org_slug?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SsoAuthorizeResponseDto"];
+                };
+            };
+        };
+    };
+    SsoController_callback: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SsoCallbackDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuthTokensResponseDto"];
+                };
+            };
+        };
+    };
+    SsoController_samlAcs: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
