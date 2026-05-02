@@ -1,13 +1,13 @@
 import { describe, expect, it } from "vitest";
-import type { AxonPush } from "../client.js";
-import type { PublishParams } from "../resources/events.js";
-import { BullMQPublisher } from "./_bullmq_publisher.js";
+import type { AxonPush } from "../../client.js";
+import { BullMQPublisher } from "../../integrations/_bullmq_publisher.js";
+import type { PublishParams } from "../../resources/events.js";
 
 function makeParams(id: string): PublishParams {
   return {
     identifier: id,
     payload: { body: id } as unknown as Record<string, never>,
-    channelId: 5,
+    channelId: "ch-1",
     eventType: "app.log",
   };
 }
@@ -39,18 +39,11 @@ describe("BullMQPublisher", () => {
 
   it("surfaces a helpful error when bullmq isn't installed", async () => {
     const publisher = new BullMQPublisher(fakeClient, { connection: {} });
-
-    // Directly await the private init path — deterministic, no dependency
-    // on background microtask scheduling. When bullmq isn't installed the
-    // dynamic import fails and our wrapper rethrows with an install hint;
-    // when bullmq *is* installed the init succeeds. Either outcome is
-    // fine — the contract we're locking in is the error message.
     try {
       await (publisher as unknown as { ensureQueue(): Promise<unknown> }).ensureQueue();
     } catch (err) {
       expect((err as Error).message).toMatch(/bullmq/);
     }
-
     await publisher.close();
   });
 
@@ -72,21 +65,35 @@ describe("BullMQPublisher", () => {
     expect(fakeQueue.closed).toBe(true);
   });
 
-  it("drops submissions after close", async () => {
+  it("flush waits for in-flight enqueues", async () => {
+    const fakeQueue = new FakeQueue();
+    const publisher = new BullMQPublisher(fakeClient, { connection: {} });
+    (publisher as unknown as { queue: FakeQueue }).queue = fakeQueue;
+
+    publisher.submit(makeParams("e1"));
+    await publisher.flush(2000);
+
+    expect(fakeQueue.added).toHaveLength(1);
+    await publisher.close();
+  });
+
+  it("drops submissions after close and counts them", async () => {
     const fakeQueue = new FakeQueue();
     const publisher = new BullMQPublisher(fakeClient, { connection: {} });
     (publisher as unknown as { queue: FakeQueue }).queue = fakeQueue;
 
     await publisher.close();
     publisher.submit(makeParams("e1"));
+    publisher.submit(makeParams("e2"));
     await flushMicrotasks();
 
     expect(fakeQueue.added).toHaveLength(0);
+    expect(publisher.droppedCount).toBe(2);
   });
 
-  it("flush() is a no-op (durable queue)", async () => {
+  it("close honours a timeout when nothing is in-flight", async () => {
     const publisher = new BullMQPublisher(fakeClient, { connection: {} });
-    await expect(publisher.flush(100)).resolves.toBeUndefined();
+    await expect(publisher.close(50)).resolves.toBeUndefined();
   });
 
   it("merges user jobOptions over defaults", async () => {

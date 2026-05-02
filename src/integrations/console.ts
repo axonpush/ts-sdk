@@ -3,9 +3,12 @@ import type { EventType } from "../index.js";
 import { logger as sdkLogger } from "../logger.js";
 import type { PublishParams } from "../resources/events.js";
 import {
+  type ChannelIdInput,
+  coerceChannelId,
   dispatchPublish,
   type IntegrationConfig,
   initTrace,
+  inPublisherScope,
   makePublisher,
   type PublisherHolder,
 } from "./_base.js";
@@ -14,9 +17,9 @@ export { flushAfterInvocation } from "./_publisher.js";
 
 /**
  * Capture `console.log` / `console.info` / `console.warn` / `console.error` /
- * `console.debug` calls and emit them to AxonPush as OpenTelemetry-shaped log
- * events. Each captured call still passes through to the original console
- * method, so user output is unaffected.
+ * `console.debug` calls and emit them to AxonPush as OpenTelemetry-shaped
+ * log events. Each captured call still passes through to the original
+ * console method, so user output is unaffected.
  *
  * Publishing is **non-blocking** by default — captured lines are pushed
  * onto a bounded queue and drained by a background task. Call
@@ -24,15 +27,18 @@ export { flushAfterInvocation } from "./_publisher.js";
  * invocation, end of a test) to guarantee delivery, or `handle.close()`
  * on graceful shutdown.
  *
- * The SDK's own internal logger (`consola`) writes directly to
- * `process.stdout.write` / `process.stderr.write` and does NOT route
- * through `console.log`, so there is no feedback-loop risk between
- * this capture and the SDK's diagnostics.
+ * Re-entrancy: when the SDK's own `consola` logger emits a warning while
+ * the publisher is mid-flight, those records are filtered out via the
+ * `inPublisherScope()` flag so they don't loop back into AxonPush.
+ *
+ * On `process.exit`, `beforeExit`, and `uncaughtException`, the patch is
+ * restored automatically so a crashing app still sees its original
+ * console output.
  *
  * Use the `source` option to control whether captured logs are tagged as
- * `agent.log` (the default — for AI agent projects) or `app.log` (for backend
- * services). The wizard wires this up automatically based on detected project
- * type.
+ * `agent.log` (the default — for AI agent projects) or `app.log` (for
+ * backend services). The wizard wires this up automatically based on
+ * detected project type.
  */
 
 const CONSOLE_LEVELS = ["log", "info", "warn", "error", "debug"] as const;
@@ -60,7 +66,7 @@ export interface ConsoleCaptureHandle {
 
 export function setupConsoleCapture(config: ConsoleCaptureConfig): ConsoleCaptureHandle {
   const client = config.client;
-  const channelId = config.channelId;
+  const channelId = coerceChannelId(config.channelId);
   const trace = initTrace(config.traceId);
   const source = config.source ?? "agent";
   const eventType: EventType = source === "app" ? "app.log" : "agent.log";
@@ -69,6 +75,7 @@ export function setupConsoleCapture(config: ConsoleCaptureConfig): ConsoleCaptur
   const holder = makePublisher(client, config, "consoleCapture");
 
   const originals: Partial<Record<ConsoleLevel, (...args: unknown[]) => void>> = {};
+  let unpatched = false;
 
   const consoleUnknown = console as unknown as Record<string, unknown>;
   for (const level of CONSOLE_LEVELS) {
@@ -83,6 +90,8 @@ export function setupConsoleCapture(config: ConsoleCaptureConfig): ConsoleCaptur
         // extremely unlikely
       }
 
+      if (inPublisherScope()) return;
+
       try {
         emitCaptured(client, holder, channelId, eventType, level, args, {
           trace,
@@ -96,20 +105,62 @@ export function setupConsoleCapture(config: ConsoleCaptureConfig): ConsoleCaptur
     };
   }
 
+  const restore = (): void => {
+    if (unpatched) return;
+    unpatched = true;
+    for (const level of CONSOLE_LEVELS) {
+      const orig = originals[level];
+      if (orig) {
+        consoleUnknown[level] = orig;
+      }
+    }
+  };
+
+  const lifecycle = installConsoleLifecycle(restore);
+
   return {
     unpatch() {
-      for (const level of CONSOLE_LEVELS) {
-        const orig = originals[level];
-        if (orig) {
-          consoleUnknown[level] = orig;
-        }
-      }
+      restore();
+      lifecycle.dispose();
     },
     async flush(timeoutMs?: number): Promise<void> {
       if (holder.publisher) await holder.publisher.flush(timeoutMs);
     },
     async close(): Promise<void> {
+      restore();
+      lifecycle.dispose();
       if (holder.publisher) await holder.publisher.close();
+    },
+  };
+}
+
+function installConsoleLifecycle(restore: () => void): { dispose(): void } {
+  if (typeof process === "undefined" || typeof process.on !== "function") {
+    return { dispose() {} };
+  }
+  const onExit = (): void => {
+    try {
+      restore();
+    } catch {
+      // restoration must never throw
+    }
+  };
+  const onUncaught = (err: Error): void => {
+    onExit();
+    // re-emit so the default handler still runs (Node prints stack and
+    // exits with 1 if no other handler intercepts).
+    process.nextTick(() => {
+      throw err;
+    });
+  };
+  process.on("exit", onExit);
+  process.on("beforeExit", onExit);
+  process.on("uncaughtException", onUncaught);
+  return {
+    dispose(): void {
+      process.removeListener("exit", onExit);
+      process.removeListener("beforeExit", onExit);
+      process.removeListener("uncaughtException", onUncaught);
     },
   };
 }
@@ -117,7 +168,7 @@ export function setupConsoleCapture(config: ConsoleCaptureConfig): ConsoleCaptur
 function emitCaptured(
   client: AxonPush,
   holder: PublisherHolder,
-  channelId: number,
+  channelId: ChannelIdInput,
   eventType: EventType,
   level: ConsoleLevel,
   args: unknown[],
@@ -149,7 +200,7 @@ function emitCaptured(
   const params: PublishParams = {
     identifier: "console",
     payload: payload as Record<string, never>,
-    channelId,
+    channelId: coerceChannelId(channelId),
     agentId: opts.agentId,
     traceId: opts.trace.traceId,
     spanId: opts.trace.nextSpanId(),

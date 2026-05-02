@@ -1,23 +1,39 @@
 import type { AxonPush } from "../client.js";
 import type { EventType } from "../index.js";
 import type { TraceContext } from "../tracing.js";
-import { type IntegrationConfig, initTrace, safePublish, truncate } from "./_base.js";
+import {
+  coerceChannelId,
+  type IntegrationConfig,
+  initTrace,
+  safePublish,
+  truncate,
+} from "./_base.js";
 
+/**
+ * Mastra agent / workflow hooks.
+ *
+ * Plug `beforeToolUse` / `afterToolUse` into a Mastra `Agent`'s tool
+ * lifecycle, and `onWorkflowStart` / `onWorkflowEnd` / `onWorkflowError`
+ * into a workflow run.
+ *
+ * Tested against `@mastra/core@^0.10`. Install:
+ *   npm install @mastra/core
+ */
 export class AxonPushMastraHooks {
   private client: AxonPush;
-  private channelId: number;
+  private channelId: string;
   private agentId: string;
   private trace: TraceContext;
 
   constructor(config: IntegrationConfig) {
     this.client = config.client;
-    this.channelId = config.channelId;
+    this.channelId = coerceChannelId(config.channelId);
     this.agentId = config.agentId ?? "mastra";
     this.trace = initTrace(config.traceId);
   }
 
-  private emit(identifier: string, eventType: EventType, payload: Record<string, unknown>) {
-    safePublish(this.client, this.channelId, identifier, eventType, payload, {
+  private emit(identifier: string, eventType: EventType, payload: Record<string, unknown>): void {
+    void safePublish(this.client, this.channelId, identifier, eventType, payload, {
       agentId: this.agentId,
       trace: this.trace,
       metadata: { framework: "mastra" },

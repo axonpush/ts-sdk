@@ -1,17 +1,28 @@
 import type { AxonPush } from "../client.js";
 import type { EventType } from "../index.js";
 import type { TraceContext } from "../tracing.js";
-import { type IntegrationConfig, initTrace, safePublish } from "./_base.js";
+import { coerceChannelId, type IntegrationConfig, initTrace, safePublish } from "./_base.js";
 
+/**
+ * OpenAI Agents JS run hooks.
+ *
+ * Pass an instance to `Runner.run({ hooks: ... })` (or per-agent via
+ * `agent.runHooks`). Each handler maps the framework's lifecycle to a
+ * single AxonPush event tagged `framework: "openai-agents"`.
+ *
+ * Tested against `@openai/agents@^0.1` (lifecycle method names follow
+ * the framework's `RunHooks` interface: `onAgentStart`, `onAgentEnd`,
+ * `onToolStart`, `onToolEnd`, `onHandoff`).
+ */
 export class AxonPushRunHooks {
   private client: AxonPush;
-  private channelId: number;
+  private channelId: string;
   private defaultAgentId: string;
   private trace: TraceContext;
 
   constructor(config: IntegrationConfig) {
     this.client = config.client;
-    this.channelId = config.channelId;
+    this.channelId = coerceChannelId(config.channelId);
     this.defaultAgentId = config.agentId ?? "openai-agent";
     this.trace = initTrace(config.traceId);
   }
@@ -21,8 +32,8 @@ export class AxonPushRunHooks {
     eventType: EventType,
     payload: Record<string, unknown>,
     agentId?: string,
-  ) {
-    safePublish(this.client, this.channelId, identifier, eventType, payload, {
+  ): void {
+    void safePublish(this.client, this.channelId, identifier, eventType, payload, {
       agentId: agentId ?? this.defaultAgentId,
       trace: this.trace,
       metadata: { framework: "openai-agents" },

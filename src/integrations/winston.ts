@@ -1,7 +1,14 @@
 import type { EventType } from "../index.js";
 import { logger as sdkLogger } from "../logger.js";
 import type { PublishParams } from "../resources/events.js";
-import { dispatchPublish, type IntegrationConfig, initTrace, makePublisher } from "./_base.js";
+import {
+  coerceChannelId,
+  dispatchPublish,
+  type IntegrationConfig,
+  initTrace,
+  inPublisherScope,
+  makePublisher,
+} from "./_base.js";
 
 export { flushAfterInvocation } from "./_publisher.js";
 
@@ -12,15 +19,19 @@ export { flushAfterInvocation } from "./_publisher.js";
  * integration provides a Winston Transport that forwards each log record
  * to AxonPush as an `app.log` event with an OpenTelemetry-shaped payload.
  *
- * Publishing is **non-blocking** by default: the transport's `log()` method
- * pushes each record onto a bounded in-memory queue and returns immediately.
- * A background task drains the queue. Call `transport.flushAxonPush(timeoutMs?)`
- * at known checkpoints (end of a Lambda invocation, end of a test) to
- * guarantee delivery. Winston's native `close()` method also drains pending
- * records before shutting down.
+ * Publishing is **non-blocking** by default: the transport's `log()`
+ * method pushes each record onto a bounded in-memory queue and returns
+ * immediately. A background task drains the queue. Call
+ * `transport.flushAxonPush(timeoutMs?)` at known checkpoints (end of a
+ * Lambda invocation, end of a test) to guarantee delivery. Winston's
+ * native `close()` method also drains pending records before shutting
+ * down.
  *
- * `winston` and `winston-transport` are OPTIONAL peer dependencies. Install
- * them alongside the SDK:
+ * Re-entrancy is handled internally: log records produced while the
+ * publisher is emitting are skipped to avoid feedback loops.
+ *
+ * Tested against `winston@^3` and `winston-transport@^4`. Both are
+ * OPTIONAL peer dependencies:
  *   npm install winston winston-transport
  *
  * Usage:
@@ -32,7 +43,11 @@ export { flushAfterInvocation } from "./_publisher.js";
  *   const log = winston.createLogger({
  *     transports: [
  *       new winston.transports.Console(),
- *       await createAxonPushWinstonTransport({ client, channelId: 42, serviceName: 'my-api' }),
+ *       await createAxonPushWinstonTransport({
+ *         client,
+ *         channelId: 'ch-uuid',
+ *         serviceName: 'my-api',
+ *       }),
  *     ],
  *   });
  *   log.error({ message: 'connection refused', user: 'alice' });
@@ -83,7 +98,7 @@ export async function createAxonPushWinstonTransport(
   }
 
   const client = config.client;
-  const channelId = config.channelId;
+  const channelId = coerceChannelId(config.channelId);
   const trace = initTrace(config.traceId);
   const eventType: EventType = "app.log";
   const holder = makePublisher(client, config, "winstonTransport");
@@ -99,7 +114,12 @@ export async function createAxonPushWinstonTransport(
       super({});
     }
 
-    override log(info: Record<string, unknown>, callback: () => void) {
+    override log(info: Record<string, unknown>, callback: () => void): void {
+      if (inPublisherScope()) {
+        callback();
+        return;
+      }
+
       try {
         const level = String(info.level ?? "info").toLowerCase();
         const severity = WINSTON_LEVELS[level] ?? WINSTON_LEVELS.info!;

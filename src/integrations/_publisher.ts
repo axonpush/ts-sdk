@@ -1,6 +1,25 @@
+import { AsyncLocalStorage } from "node:async_hooks";
 import type { AxonPush } from "../client.js";
 import { logger as sdkLogger } from "../logger.js";
 import type { PublishParams } from "../resources/events.js";
+
+const publisherScope = new AsyncLocalStorage<true>();
+
+/**
+ * Run `fn` inside a marker scope identifying that the current async
+ * flow is traversing the publisher's emit path. Logging integrations
+ * check this flag (via {@link inPublisherScope}) and skip their own
+ * emission so internal SDK warnings can never loop back through a
+ * patched logger.
+ */
+export function runInPublisherScope<T>(fn: () => T): T {
+  return publisherScope.run(true, fn);
+}
+
+/** True when the current async flow is inside a publisher emit path. */
+export function inPublisherScope(): boolean {
+  return publisherScope.getStore() === true;
+}
 
 /**
  * Shared non-blocking publisher used by the logging integrations
@@ -11,6 +30,11 @@ import type { PublishParams } from "../resources/events.js";
  * A single async drain loop dequeues entries and awaits
  * `client.events.publish(...)` in the background, so logging from an
  * async request handler stays O(microseconds) on the event loop.
+ *
+ * The drain path is wrapped with `runInPublisherScope` so that any
+ * downstream `console.warn` / `logger.warn` produced while publishing
+ * cannot loop back into a logging integration that has patched the
+ * caller's logger.
  *
  * Call `flush(timeoutMs?)` at known checkpoints (end of a Lambda
  * invocation, end of a test) to guarantee delivery. `close()` drains
@@ -25,11 +49,26 @@ export const DEFAULT_DROP_WARNING_INTERVAL_MS = 10_000;
 export const DEFAULT_CONCURRENCY = 1;
 
 const IDLE_POLL_INTERVAL_MS = 5;
+const BLOCK_POLL_INTERVAL_MS = 1;
 
 export type PublisherMode = "background" | "sync" | "bullmq";
 
+/**
+ * What the publisher does when its bounded queue is full.
+ *
+ * - `drop-oldest` (default): evict the head entry to make room — newest
+ *   submissions always make it in.
+ * - `drop-newest`: silently drop the incoming submission — oldest
+ *   entries are preserved.
+ * - `block`: best-effort spin until a slot frees up. Submissions become
+ *   asynchronous; suitable only when the caller can tolerate latency.
+ */
+export type OverflowPolicy = "drop-oldest" | "drop-newest" | "block";
+
 export interface BackgroundPublisherOptions {
   queueSize?: number;
+  /** Default: `'drop-oldest'`. */
+  overflowPolicy?: OverflowPolicy;
   shutdownTimeoutMs?: number;
   dropWarningIntervalMs?: number;
   concurrency?: number;
@@ -38,6 +77,7 @@ export interface BackgroundPublisherOptions {
 export class BackgroundPublisher {
   private readonly client: AxonPush;
   private readonly queueSize: number;
+  private readonly overflowPolicy: OverflowPolicy;
   private readonly shutdownTimeoutMs: number;
   private readonly dropWarningIntervalMs: number;
   private readonly concurrency: number;
@@ -50,16 +90,22 @@ export class BackgroundPublisher {
   constructor(client: AxonPush, opts: BackgroundPublisherOptions = {}) {
     this.client = client;
     this.queueSize = opts.queueSize ?? DEFAULT_QUEUE_SIZE;
+    this.overflowPolicy = opts.overflowPolicy ?? "drop-oldest";
     this.shutdownTimeoutMs = opts.shutdownTimeoutMs ?? DEFAULT_SHUTDOWN_TIMEOUT_MS;
     this.dropWarningIntervalMs = opts.dropWarningIntervalMs ?? DEFAULT_DROP_WARNING_INTERVAL_MS;
     this.concurrency = Math.max(1, opts.concurrency ?? DEFAULT_CONCURRENCY);
     registerPublisher(this);
   }
 
+  /** Total records dropped since construction (any overflow policy). */
+  get droppedCount(): number {
+    return this.drops;
+  }
+
   submit(params: PublishParams): void {
     if (this.closed) return;
     if (this.queue.length >= this.queueSize) {
-      this.recordDrop();
+      this.handleOverflow(params);
       return;
     }
     this.queue.push(params);
@@ -74,18 +120,50 @@ export class BackgroundPublisher {
     }
   }
 
-  async close(): Promise<void> {
+  async close(timeoutMs?: number): Promise<void> {
     if (this.closed) {
       unregisterPublisher(this);
       return;
     }
     this.closed = true;
-    await this.flush(this.shutdownTimeoutMs);
+    await this.flush(timeoutMs ?? this.shutdownTimeoutMs);
+    if (this.drops > 0) {
+      sdkLogger.warn(
+        `axonpush publisher closed with ${this.drops} dropped records ` +
+          `(queueSize=${this.queueSize}, policy=${this.overflowPolicy})`,
+      );
+    }
     unregisterPublisher(this);
   }
 
   async [Symbol.asyncDispose](): Promise<void> {
     await this.close();
+  }
+
+  private handleOverflow(params: PublishParams): void {
+    switch (this.overflowPolicy) {
+      case "drop-newest":
+        this.recordDrop();
+        return;
+      case "drop-oldest":
+        this.queue.shift();
+        this.recordDrop();
+        this.queue.push(params);
+        this.ensureDraining();
+        return;
+      case "block":
+        void this.blockUntilSpace(params);
+        return;
+    }
+  }
+
+  private async blockUntilSpace(params: PublishParams): Promise<void> {
+    while (!this.closed && this.queue.length >= this.queueSize) {
+      await sleep(BLOCK_POLL_INTERVAL_MS);
+    }
+    if (this.closed) return;
+    this.queue.push(params);
+    this.ensureDraining();
   }
 
   private ensureDraining(): void {
@@ -101,9 +179,17 @@ export class BackgroundPublisher {
         const params = this.queue.shift();
         if (params === undefined) return;
         try {
-          await this.client.events.publish(params);
+          await runInPublisherScope(() =>
+            (
+              this.client as unknown as {
+                events: { publish(p: PublishParams): Promise<unknown> };
+              }
+            ).events.publish(params),
+          );
         } catch (err) {
-          sdkLogger.warn(`axonpush publish failed: ${(err as Error).message ?? err}`);
+          runInPublisherScope(() => {
+            sdkLogger.warn(`axonpush publish failed: ${(err as Error).message ?? err}`);
+          });
         }
       }
     } finally {
@@ -116,10 +202,13 @@ export class BackgroundPublisher {
     const now = Date.now();
     if (now - this.lastDropWarn < this.dropWarningIntervalMs) return;
     this.lastDropWarn = now;
-    sdkLogger.warn(
-      `axonpush publisher queue full; ${this.drops} records dropped so far ` +
-        `(queueSize=${this.queueSize}) — consider increasing queueSize`,
-    );
+    runInPublisherScope(() => {
+      sdkLogger.warn(
+        `axonpush publisher queue full; ${this.drops} records dropped so far ` +
+          `(queueSize=${this.queueSize}, policy=${this.overflowPolicy}) — consider ` +
+          "increasing queueSize or switching overflowPolicy",
+      );
+    });
   }
 }
 

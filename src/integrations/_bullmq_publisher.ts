@@ -10,7 +10,8 @@ import type { PublishParams } from "../resources/events.js";
  * survives app restarts and is retried on transient failures. Equivalent
  * of python-axonpush's `RqPublisher`.
  *
- * Requires `bun add bullmq` (optional peer dependency).
+ * Tested against `bullmq@^5`. See https://docs.bullmq.io for connection
+ * options. Requires `bun add bullmq` (optional peer dependency).
  */
 
 type ConnectionLike = unknown;
@@ -18,8 +19,8 @@ type ConnectionLike = unknown;
 export interface BullMQPublisherOptions {
   connection: ConnectionLike;
   queueName?: string;
-  /** BullMQ job options — merged with the publisher defaults (attempts=3,
-   * removeOnComplete=true, removeOnFail keeps 24h). */
+  /** BullMQ job options — merged with the publisher defaults
+   * (`attempts=3`, `removeOnComplete=true`, `removeOnFail` keeps 24h). */
   jobOptions?: Record<string, unknown>;
 }
 
@@ -56,12 +57,19 @@ const DEFAULT_JOB_OPTIONS: Record<string, unknown> = {
   removeOnFail: { age: 86400 },
 };
 
+/**
+ * Durable submit-ahead publisher. Mirrors {@link BackgroundPublisher}'s
+ * surface (`submit`, `flush`, `close`, `Symbol.asyncDispose`) so callers
+ * can swap implementations behind {@link PublisherHolder}.
+ */
 export class BullMQPublisher {
   private readonly queueName: string;
   private readonly jobOptions: Record<string, unknown>;
   private readonly connection: ConnectionLike;
   private queue: BullMQQueue | null = null;
   private initPromise: Promise<void> | null = null;
+  private inFlight = 0;
+  private dropped = 0;
   private closed = false;
 
   constructor(_client: AxonPush, opts: BullMQPublisherOptions) {
@@ -73,11 +81,23 @@ export class BullMQPublisher {
     this.jobOptions = { ...DEFAULT_JOB_OPTIONS, ...(opts.jobOptions ?? {}) };
   }
 
+  get droppedCount(): number {
+    return this.dropped;
+  }
+
   submit(params: PublishParams): void {
-    if (this.closed) return;
-    void this.enqueue(params).catch((err) => {
-      sdkLogger.warn(`axonpush bullmq enqueue failed: ${(err as Error).message ?? err}`);
-    });
+    if (this.closed) {
+      this.dropped++;
+      return;
+    }
+    this.inFlight++;
+    void this.enqueue(params)
+      .catch((err) => {
+        sdkLogger.warn(`axonpush bullmq enqueue failed: ${(err as Error).message ?? err}`);
+      })
+      .finally(() => {
+        this.inFlight--;
+      });
   }
 
   private async enqueue(params: PublishParams): Promise<void> {
@@ -98,12 +118,22 @@ export class BullMQPublisher {
     return this.queue;
   }
 
-  // Redis-backed queue is durable; nothing to flush in-process.
-  async flush(_timeoutMs?: number): Promise<void> {}
+  /**
+   * Wait for in-flight enqueues to resolve. The Redis queue itself is
+   * durable, so this only drains the local microtask backlog.
+   */
+  async flush(timeoutMs?: number): Promise<void> {
+    const deadline = timeoutMs !== undefined ? Date.now() + timeoutMs : Number.POSITIVE_INFINITY;
+    while (this.inFlight > 0) {
+      if (Date.now() >= deadline) return;
+      await new Promise((r) => setTimeout(r, 1));
+    }
+  }
 
-  async close(): Promise<void> {
+  async close(timeoutMs?: number): Promise<void> {
     if (this.closed) return;
     this.closed = true;
+    await this.flush(timeoutMs);
     if (this.queue) {
       try {
         await this.queue.close();
@@ -139,7 +169,11 @@ export async function createBullMQWorker(
     queueName,
     async (job) => {
       const params = job.data as PublishParams;
-      await opts.client.events.publish(params);
+      await (
+        opts.client as unknown as {
+          events: { publish(p: PublishParams): Promise<unknown> };
+        }
+      ).events.publish(params);
     },
     { connection: opts.connection },
   );

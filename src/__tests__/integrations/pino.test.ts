@@ -1,7 +1,7 @@
-import { describe, expect, it } from "vitest";
-import type { AxonPush } from "../client.js";
-import type { PublishParams } from "../resources/events.js";
-import { createAxonPushPinoStream } from "./pino.js";
+import { describe, expect, it, vi } from "vitest";
+import type { AxonPush } from "../../client.js";
+import { createAxonPushPinoStream } from "../../integrations/pino.js";
+import type { PublishParams } from "../../resources/events.js";
 
 function makeFakeClient() {
   const published: PublishParams[] = [];
@@ -21,7 +21,7 @@ describe("pino stream", () => {
     const { client, published } = makeFakeClient();
     const stream = createAxonPushPinoStream({
       client,
-      channelId: 5,
+      channelId: "ch-1",
       serviceName: "pino-svc",
     });
     stream.write(
@@ -36,7 +36,7 @@ describe("pino stream", () => {
 
     expect(published).toHaveLength(1);
     const event = published[0]!;
-    expect(event.channelId).toBe(5);
+    expect(event.channelId).toBe("ch-1");
     expect(event.eventType).toBe("app.log");
     expect(event.identifier).toBe("pino");
     const payload = event.payload as Record<string, unknown>;
@@ -52,7 +52,7 @@ describe("pino stream", () => {
 
   it("maps each Pino level to its OTel severity", async () => {
     const { client, published } = makeFakeClient();
-    const stream = createAxonPushPinoStream({ client, channelId: 5 });
+    const stream = createAxonPushPinoStream({ client, channelId: "ch-1" });
     const cases: Array<[number, number, string]> = [
       [10, 1, "TRACE"],
       [20, 5, "DEBUG"],
@@ -61,7 +61,7 @@ describe("pino stream", () => {
       [50, 17, "ERROR"],
       [60, 21, "FATAL"],
     ];
-    for (const [level, _, __] of cases) {
+    for (const [level] of cases) {
       stream.write(JSON.stringify({ level, msg: "msg" }));
     }
     await stream.flush(2000);
@@ -76,7 +76,7 @@ describe("pino stream", () => {
 
   it("non-blocking emit returns immediately in background mode", async () => {
     const { client } = makeFakeClient();
-    const stream = createAxonPushPinoStream({ client, channelId: 5 });
+    const stream = createAxonPushPinoStream({ client, channelId: "ch-1" });
     const start = Date.now();
     for (let i = 0; i < 50; i++) {
       stream.write(JSON.stringify({ level: 30, msg: `msg_${i}` }));
@@ -84,6 +84,18 @@ describe("pino stream", () => {
     const writeElapsed = Date.now() - start;
     expect(writeElapsed).toBeLessThan(50);
     await stream.flush(2000);
+    await stream.close();
+  });
+
+  it("numeric channelId emits a deprecation warning", async () => {
+    const warnSpy = vi.spyOn(console, "warn");
+    const { client, published } = makeFakeClient();
+    const stream = createAxonPushPinoStream({ client, channelId: 9 });
+    stream.write(JSON.stringify({ level: 30, msg: "x" }));
+    await stream.flush(2000);
+    expect(published[0]?.channelId).toBe("9");
+    expect(warnSpy.mock.calls.some((c) => String(c[0]).includes("deprecated"))).toBe(true);
+    warnSpy.mockRestore();
     await stream.close();
   });
 });

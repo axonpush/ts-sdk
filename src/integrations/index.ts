@@ -1,4 +1,12 @@
-export { type IntegrationConfig, safePublish, truncate } from "./_base.js";
+export {
+  type ChannelIdInput,
+  coerceChannelId,
+  type IntegrationConfig,
+  inPublisherScope,
+  runInPublisherScope,
+  safePublish,
+  truncate,
+} from "./_base.js";
 export {
   BullMQPublisher,
   type BullMQPublisherOptions,
@@ -13,6 +21,7 @@ export {
   detectServerless,
   type Flushable,
   flushAfterInvocation,
+  type OverflowPolicy,
   type PublisherMode,
 } from "./_publisher.js";
 export { AxonPushAnthropicTracer } from "./anthropic.js";
@@ -32,6 +41,7 @@ export {
   type OtelExporterConfig,
 } from "./otel.js";
 export {
+  type AxonPushPinoStream,
   createAxonPushPinoStream,
   type PinoStreamConfig,
 } from "./pino.js";

@@ -1,18 +1,20 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { AxonPush } from "../client.js";
-import type { PublishParams } from "../resources/events.js";
+import type { AxonPush } from "../../client.js";
+import { runInPublisherScope } from "../../integrations/_base.js";
 import {
   BackgroundPublisher,
   detectServerless,
   type Flushable,
   flushAfterInvocation,
-} from "./_publisher.js";
+  inPublisherScope,
+} from "../../integrations/_publisher.js";
+import type { PublishParams } from "../../resources/events.js";
 
 function makeParams(id: string): PublishParams {
   return {
     identifier: id,
     payload: { body: id } as unknown as Record<string, never>,
-    channelId: 5,
+    channelId: "ch-1",
     eventType: "app.log",
   };
 }
@@ -22,8 +24,10 @@ class FakeEventsResource {
   public failures = 0;
   public latencyMs = 0;
   public shouldThrow = false;
+  public observedScopeFlag: boolean | undefined;
 
   async publish(params: PublishParams): Promise<undefined> {
+    this.observedScopeFlag = inPublisherScope();
     if (this.latencyMs > 0) {
       await new Promise((r) => setTimeout(r, this.latencyMs));
     }
@@ -53,6 +57,19 @@ describe("BackgroundPublisher basics", () => {
     expect(events.published).toHaveLength(5);
     expect(events.published[0]?.identifier).toBe("r_0");
     await pub.close();
+  });
+
+  it("publish runs inside publisherScope", async () => {
+    const { client, events } = makeFakeClient();
+    const pub = new BackgroundPublisher(client);
+    pub.submit(makeParams("scoped"));
+    await pub.flush(2000);
+    expect(events.observedScopeFlag).toBe(true);
+    await pub.close();
+  });
+
+  it("inPublisherScope is false outside the publisher", () => {
+    expect(inPublisherScope()).toBe(false);
   });
 
   it("flush blocks until drained", async () => {
@@ -104,15 +121,44 @@ describe("BackgroundPublisher basics", () => {
   });
 });
 
-describe("BackgroundPublisher overflow", () => {
-  it("drops records when queue is full", async () => {
+describe("BackgroundPublisher overflow policies", () => {
+  it("default 'drop-oldest' evicts head when full", async () => {
     const { client, events } = makeFakeClient();
     events.latencyMs = 50;
     const pub = new BackgroundPublisher(client, { queueSize: 2 });
-    for (let i = 0; i < 20; i++) pub.submit(makeParams(`x_${i}`));
+    for (let i = 0; i < 10; i++) pub.submit(makeParams(`x_${i}`));
     await pub.flush(2000);
-    expect(events.published.length).toBeLessThan(20);
-    expect(events.published.length).toBeGreaterThan(0);
+    expect(pub.droppedCount).toBeGreaterThan(0);
+    expect(events.published.length).toBeLessThan(10);
+    await pub.close();
+  });
+
+  it("'drop-newest' refuses new submissions when full", async () => {
+    const { client, events } = makeFakeClient();
+    events.latencyMs = 50;
+    const pub = new BackgroundPublisher(client, {
+      queueSize: 2,
+      overflowPolicy: "drop-newest",
+    });
+    for (let i = 0; i < 10; i++) pub.submit(makeParams(`x_${i}`));
+    await pub.flush(2000);
+    expect(pub.droppedCount).toBeGreaterThan(0);
+    const ids = events.published.map((p) => p.identifier);
+    expect(ids[0]).toBe("x_0");
+    await pub.close();
+  });
+
+  it("'block' eventually accepts every submission", async () => {
+    const { client, events } = makeFakeClient();
+    events.latencyMs = 5;
+    const pub = new BackgroundPublisher(client, {
+      queueSize: 2,
+      overflowPolicy: "block",
+    });
+    for (let i = 0; i < 8; i++) pub.submit(makeParams(`x_${i}`));
+    await pub.flush(5000);
+    expect(events.published).toHaveLength(8);
+    expect(pub.droppedCount).toBe(0);
     await pub.close();
   });
 
@@ -130,6 +176,16 @@ describe("BackgroundPublisher overflow", () => {
     expect(events.published).toHaveLength(1);
     expect(events.published[0]?.identifier).toBe("should_succeed");
     await pub.close();
+  });
+});
+
+describe("runInPublisherScope helper", () => {
+  it("sets the flag for the synchronous body", () => {
+    expect(inPublisherScope()).toBe(false);
+    runInPublisherScope(() => {
+      expect(inPublisherScope()).toBe(true);
+    });
+    expect(inPublisherScope()).toBe(false);
   });
 });
 
@@ -232,8 +288,7 @@ describe("flushAfterInvocation", () => {
         throw new Error("flush exploded");
       },
     };
-    // Spy on the SDK logger's warn to verify the error was logged
-    const sdkLogger = await import("../logger.js");
+    const sdkLogger = await import("../../logger.js");
     const origWarn = sdkLogger.logger.warn.bind(sdkLogger.logger);
     sdkLogger.logger.warn = ((...args: unknown[]) => {
       warnSpy(...args);
