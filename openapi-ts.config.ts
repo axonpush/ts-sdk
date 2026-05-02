@@ -12,7 +12,6 @@ export default defineConfig({
   output: {
     path: "./src/_internal/api",
     format: "biome",
-    lint: false,
   },
   plugins: [
     "@hey-api/typescript",

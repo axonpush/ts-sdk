@@ -127,14 +127,14 @@ export function getSettings(): ResolvedSettings {
 }
 
 /**
- * Generated operation function signature. `args` is the typed options bag
- * accepted by `sdk.gen.ts` functions; `T` is the success-response type
- * returned in the `data` field when `throwOnError: true`.
+ * Generated operation function signature. `args` is the per-op options bag
+ * baked into `sdk.gen.ts`; `T` is the success-response payload type. We
+ * type `args` as `any` because the generator emits a distinct argument
+ * type per op, and the chokepoint relies on shape-compatibility, not nominal
+ * equality.
  */
-export type GeneratedOp<T> = (args: {
-  throwOnError: true;
-  [k: string]: unknown;
-}) => Promise<{ data: T; request: Request; response: Response }>;
+// biome-ignore lint/suspicious/noExplicitAny: see doc comment above.
+export type GeneratedOp<T = unknown> = (args: any) => Promise<{ data?: T; [k: string]: unknown }>;
 
 const RETRY_BACKOFF_MS = [250, 500, 1000, 2000, 4000] as const;
 
@@ -180,7 +180,7 @@ export async function invokeSync<T>(
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
       const result = await op({ ...baseArgs, throwOnError: true });
-      return result.data;
+      return result.data ?? null;
     } catch (err) {
       lastErr = err;
       if (!isRetryable(err) || attempt === maxRetries) break;

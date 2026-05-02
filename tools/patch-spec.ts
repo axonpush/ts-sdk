@@ -59,7 +59,7 @@ function dedupeHeaderParams(spec: Record<string, Json>): void {
         const cloned = { ...p };
         cloned.name = String(p.name)
           .split("-")
-          .map((part) => (part ? part[0].toUpperCase() + part.slice(1).toLowerCase() : part))
+          .map((part) => (part ? part[0]!.toUpperCase() + part.slice(1).toLowerCase() : part))
           .join("-");
         next.push(cloned);
       }
@@ -76,4 +76,9 @@ function main(path: string): void {
   writeFileSync(path, JSON.stringify(spec, null, 2));
 }
 
-main(process.argv[2]);
+const inputPath = process.argv[2];
+if (!inputPath) {
+  console.error("Usage: bun run tools/patch-spec.ts <path-to-openapi.json>");
+  process.exit(2);
+}
+main(inputPath);

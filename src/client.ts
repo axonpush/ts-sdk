@@ -1,20 +1,42 @@
 import { type GeneratedOp, invokeSync, setSettings } from "./_internal/transport";
 import { type AxonPushOptions, type ResolvedSettings, resolveSettings } from "./config";
+import { ApiKeysResource } from "./resources/api-keys";
+import { AppsResource } from "./resources/apps";
+import { ChannelsResource } from "./resources/channels";
+import { EnvironmentsResource } from "./resources/environments";
+import { EventsResource } from "./resources/events";
+import { OrganizationsResource } from "./resources/organizations";
+import { TracesResource } from "./resources/traces";
+import { WebhooksResource } from "./resources/webhooks";
 import { getOrCreateTrace, type TraceContext } from "./tracing";
 
 /**
  * High-level facade over the AxonPush REST + realtime APIs.
  *
- * Resource accessors (`events`, `channels`, ...) are loaded lazily on first
- * access via dynamic `import()` so that tree-shakers can drop unused
- * resources, and so that resource modules compile independently of the core
- * client during the v0.0.5 rewrite.
+ * Resource accessors (`events`, `channels`, ...) are constructed once
+ * per `AxonPush` instance and exposed as plain properties so callers can
+ * write `client.events.publish(...)` without awaiting.
  */
 export class AxonPush {
   /** Fully-resolved configuration, materialised in the constructor. */
   readonly settings: ResolvedSettings;
 
-  private readonly _resources: Record<string, unknown> = {};
+  /** Events resource — `publish`, `list`, `search`. */
+  readonly events: EventsResource;
+  /** Channels resource — `create`, `get`, `update`, `delete`. */
+  readonly channels: ChannelsResource;
+  /** Apps resource — `list`, `get`, `create`, `update`, `delete`. */
+  readonly apps: AppsResource;
+  /** Environments resource — `list`, `create`, `update`, `delete`, `promoteToDefault`. */
+  readonly environments: EnvironmentsResource;
+  /** Webhooks resource — `createEndpoint`, `listEndpoints`, `deleteEndpoint`, `deliveries`. */
+  readonly webhooks: WebhooksResource;
+  /** Traces resource — `list`, `stats`, `events`, `summary`. */
+  readonly traces: TracesResource;
+  /** API keys resource — `create`, `list`, `delete`. */
+  readonly apiKeys: ApiKeysResource;
+  /** Organizations resource — `create`, `get`, `list`, `update`, `delete`, `invite`, `removeMember`, `transferOwnership`. */
+  readonly organizations: OrganizationsResource;
 
   /**
    * @param options Optional caller overrides; falsy fields fall through to
@@ -23,6 +45,14 @@ export class AxonPush {
   constructor(options?: AxonPushOptions) {
     this.settings = resolveSettings(options);
     setSettings(this.settings);
+    this.events = new EventsResource(this);
+    this.channels = new ChannelsResource(this);
+    this.apps = new AppsResource(this);
+    this.environments = new EnvironmentsResource(this);
+    this.webhooks = new WebhooksResource(this);
+    this.traces = new TracesResource(this);
+    this.apiKeys = new ApiKeysResource(this);
+    this.organizations = new OrganizationsResource(this);
   }
 
   /** The configured environment label (or `undefined` if none). */
@@ -31,63 +61,9 @@ export class AxonPush {
   }
 
   /**
-   * Lazily import a resource module and instantiate its class with `this`.
-   * Resources are cached per-instance after first construction.
-   */
-  private async _resource(name: string, modulePath: string, exportName: string): Promise<unknown> {
-    const cached = this._resources[name];
-    if (cached) return cached;
-    const mod = (await import(modulePath)) as Record<string, unknown>;
-    const Ctor = mod[exportName] as new (parent: AxonPush) => unknown;
-    const instance = new Ctor(this);
-    this._resources[name] = instance;
-    return instance;
-  }
-
-  /** Events resource — `publish`, `list`, `search`. */
-  get events(): Promise<unknown> {
-    return this._resource("events", "./resources/events", "EventsResource");
-  }
-
-  /** Channels resource. */
-  get channels(): Promise<unknown> {
-    return this._resource("channels", "./resources/channels", "ChannelsResource");
-  }
-
-  /** Apps resource. */
-  get apps(): Promise<unknown> {
-    return this._resource("apps", "./resources/apps", "AppsResource");
-  }
-
-  /** Environments resource. */
-  get environments(): Promise<unknown> {
-    return this._resource("environments", "./resources/environments", "EnvironmentsResource");
-  }
-
-  /** Webhooks resource. */
-  get webhooks(): Promise<unknown> {
-    return this._resource("webhooks", "./resources/webhooks", "WebhooksResource");
-  }
-
-  /** Traces resource. */
-  get traces(): Promise<unknown> {
-    return this._resource("traces", "./resources/traces", "TracesResource");
-  }
-
-  /** API keys resource. */
-  get apiKeys(): Promise<unknown> {
-    return this._resource("apiKeys", "./resources/api-keys", "ApiKeysResource");
-  }
-
-  /** Organizations resource. */
-  get organizations(): Promise<unknown> {
-    return this._resource("organizations", "./resources/organizations", "OrganizationsResource");
-  }
-
-  /**
    * Open a realtime (MQTT-over-WSS) connection. The realtime module is
    * imported lazily so callers that never use realtime do not pay for the
-   * `mqtt` peer dependency.
+   * `mqtt` peer dependency at module-load time.
    *
    * @param opts Realtime client options (forwarded as the second arg).
    * @returns A `RealtimeClient` instance ready to subscribe / publish.

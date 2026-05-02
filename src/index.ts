@@ -1,87 +1,115 @@
-export { AxonPush, type AxonPushOptions } from "./client.js";
-export { currentEnvironment, withEnvironment } from "./environment.js";
+/**
+ * AxonPush — real-time event infrastructure for AI agent systems.
+ *
+ * Top-level package. Public API is re-exported here; internal helpers
+ * live under `./_internal` and are not part of the supported surface.
+ */
+
+// Core (Stream A)
+export { AxonPush } from "./client";
+export type { AxonPushOptions } from "./config";
 export {
+  APIConnectionError,
   AuthenticationError,
   AxonPushError,
-  ConnectionError,
   ForbiddenError,
   NotFoundError,
   RateLimitError,
+  RetryableError,
   ServerError,
   ValidationError,
-} from "./errors.js";
-export { logger } from "./logger.js";
+} from "./errors";
+// Integrations — primitives + helpers (Stream D).
+// Framework-specific installers are reachable via
+// `@axonpush/sdk/integrations/<name>` per package.json `exports`.
 export {
-  buildPublishTopic,
-  buildSubscribeTopic,
-  type FetchCredentialsOptions,
-  fetchIotCredentials,
-  type IotCredentials,
-  type MqttFactory,
-  type MqttLikeClient,
-  msUntilRefresh,
-  type PublishData,
-  RealtimeClient,
-  type RealtimeClientOptions,
-  type SubscribeFilters,
-  type TopicParts,
-  WebSocketClient,
-} from "./realtime/index.js";
-export { type SSESubscribeOptions, SSESubscription } from "./realtime/sse.js";
-export type { EventListPage, EventQueryParams, PublishParams } from "./resources/events.js";
-export type { components, paths } from "./schema";
+  type ChannelIdInput,
+  coerceChannelId,
+  type IntegrationConfig,
+  safePublish,
+  truncate,
+} from "./integrations/_base";
 export {
-  currentTrace,
-  getOrCreateTrace,
-  TraceContext,
-  withTrace,
-} from "./tracing.js";
-export type { AxonPushConfig } from "./transport.js";
-
-export type AxonEvent = import("./schema").components["schemas"]["EventResponseDto"];
-export type Channel = import("./schema").components["schemas"]["ChannelResponseDto"];
-export type App = import("./schema").components["schemas"]["AppResponseDto"];
-export type Environment = import("./schema").components["schemas"]["EnvironmentResponseDto"];
-export type WebhookEndpoint =
-  import("./schema").components["schemas"]["WebhookEndpointResponseDto"];
-export type WebhookDelivery =
-  import("./schema").components["schemas"]["WebhookDeliveryResponseDto"];
-export type ApiKey = import("./schema").components["schemas"]["ApiKeyResponseDto"];
-export type CreateEventDto = import("./schema").components["schemas"]["CreateEventDto"];
-export type EventType = import("./schema").components["schemas"]["CreateEventDto"]["eventType"];
-
-export {
-  AxonPushAnthropicTracer,
-  AxonPushCallbackHandler,
-  AxonPushLangGraphHandler,
-  AxonPushLlamaIndexHandler,
-  AxonPushMastraHooks,
-  AxonPushRunHooks,
-  AxonPushSpanExporter,
-  axonPushADKCallbacks,
-  axonPushMiddleware,
-  BackgroundPublisher,
-  type BackgroundPublisherOptions,
   BullMQPublisher,
   type BullMQPublisherOptions,
   type BullMQWorkerOptions,
-  buildSentryDsn,
-  type ConsoleCaptureConfig,
-  type ConsoleCaptureHandle,
-  createAxonPushPinoStream,
-  createAxonPushWinstonTransport,
   createBullMQWorker,
+} from "./integrations/_bullmq_publisher";
+export {
+  BackgroundPublisher,
+  type BackgroundPublisherOptions,
+  DEFAULT_QUEUE_SIZE,
+  DEFAULT_SHUTDOWN_TIMEOUT_MS,
   detectServerless,
   type Flushable,
   flushAfterInvocation,
-  type InstallSentryOptions,
-  type IntegrationConfig,
-  installSentry,
-  type OtelExporterConfig,
-  type PinoStreamConfig,
+  type OverflowPolicy,
   type PublisherMode,
-  type SentryLike,
+} from "./integrations/_publisher";
+export { AxonPushAnthropicTracer } from "./integrations/anthropic";
+export {
+  type ConsoleCaptureConfig,
+  type ConsoleCaptureHandle,
   setupConsoleCapture,
+} from "./integrations/console";
+export { axonPushADKCallbacks } from "./integrations/google-adk";
+export { AxonPushCallbackHandler } from "./integrations/langchain";
+export { AxonPushLangGraphHandler } from "./integrations/langgraph";
+export { AxonPushLlamaIndexHandler } from "./integrations/llamaindex";
+export { AxonPushMastraHooks } from "./integrations/mastra";
+export { AxonPushRunHooks } from "./integrations/openai-agents";
+export { AxonPushSpanExporter, type OtelExporterConfig } from "./integrations/otel";
+export {
+  type AxonPushPinoStream,
+  createAxonPushPinoStream,
+  type PinoStreamConfig,
+} from "./integrations/pino";
+export {
+  buildDsn as buildSentryDsn,
+  type InstallSentryOptions,
+  installSentry,
+  type SentryLike,
+} from "./integrations/sentry";
+export { axonPushMiddleware } from "./integrations/vercel-ai";
+export {
+  createAxonPushWinstonTransport,
   type WinstonTransportConfig,
-} from "./integrations/index.js";
-export { EnvironmentsResource } from "./resources/environments.js";
+} from "./integrations/winston";
+// Models + Resources (Stream B)
+export type {
+  ApiKey,
+  App,
+  Channel,
+  CreateEventDto,
+  Environment,
+  Event,
+  EventDetails,
+  EventListResponseDto,
+  EventType,
+  Organization,
+  TraceListItem,
+  TraceSummary,
+  User,
+  WebhookDelivery,
+  WebhookEndpoint,
+  WebhookEndpointCreateResponseDto,
+} from "./models";
+export type {
+  IotCredentials,
+  PublishData,
+  RealtimeOptions,
+  SubscribeFilters,
+  TopicParts,
+} from "./realtime";
+// Realtime (Stream C)
+export { RealtimeClient } from "./realtime";
+export { ApiKeysResource } from "./resources/api-keys";
+export { AppsResource } from "./resources/apps";
+export { ChannelsResource } from "./resources/channels";
+export { EnvironmentsResource } from "./resources/environments";
+export { EventsResource } from "./resources/events";
+export { OrganizationsResource } from "./resources/organizations";
+export { TracesResource } from "./resources/traces";
+export { WebhooksResource } from "./resources/webhooks";
+export { currentTrace, getOrCreateTrace, TraceContext } from "./tracing";
+export { __version__ } from "./version";
