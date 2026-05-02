@@ -1,23 +1,39 @@
 import type { AxonPush } from "../client.js";
 import type { EventType } from "../index.js";
 import type { TraceContext } from "../tracing.js";
-import { type IntegrationConfig, initTrace, safePublish, truncate } from "./_base.js";
+import {
+  coerceChannelId,
+  type IntegrationConfig,
+  initTrace,
+  safePublish,
+  truncate,
+} from "./_base.js";
 
+/**
+ * LlamaIndex.TS instrumentation hooks.
+ *
+ * Wire each method into the corresponding callback in your `Settings`
+ * or per-query `Callbacks` object. Each hook emits a single AxonPush
+ * event tagged with `framework: "llamaindex"`.
+ *
+ * Tested against `llamaindex@^0.8`. Install:
+ *   npm install llamaindex
+ */
 export class AxonPushLlamaIndexHandler {
   private client: AxonPush;
-  private channelId: number;
+  private channelId: string;
   private agentId: string;
   private trace: TraceContext;
 
   constructor(config: IntegrationConfig) {
     this.client = config.client;
-    this.channelId = config.channelId;
+    this.channelId = coerceChannelId(config.channelId);
     this.agentId = config.agentId ?? "llamaindex";
     this.trace = initTrace(config.traceId);
   }
 
-  private emit(identifier: string, eventType: EventType, payload: Record<string, unknown>) {
-    safePublish(this.client, this.channelId, identifier, eventType, payload, {
+  private emit(identifier: string, eventType: EventType, payload: Record<string, unknown>): void {
+    void safePublish(this.client, this.channelId, identifier, eventType, payload, {
       agentId: this.agentId,
       trace: this.trace,
       metadata: { framework: "llamaindex" },

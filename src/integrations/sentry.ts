@@ -1,21 +1,30 @@
 /**
  * Sentry SDK integration helper.
  *
- * Builds a Sentry DSN from AxonPush credentials and forwards to Sentry.init().
- * Usable with `@sentry/node`, `@sentry/browser`, `@sentry/nextjs`, etc.
+ * Builds a Sentry DSN from AxonPush credentials and forwards to
+ * `Sentry.init(...)`. Usable with `@sentry/node`, `@sentry/browser`,
+ * `@sentry/nextjs`, etc.
+ *
+ * Tested against `@sentry/*@^8`. The DSN format
+ * `<scheme>://<apiKey>@<host>/<channelId>` matches the AxonPush backend's
+ * envelope ingest at `/api/:projectId/{store|envelope|minidump|security}`,
+ * where `:projectId` is treated as the channel id (string-typed on the
+ * backend, so a UUID works as-is — and a numeric id from v0.0.4 still
+ * works).
  *
  * Usage (Node):
  *   import * as Sentry from "@sentry/node";
  *   import { installSentry } from "@axonpush/sdk/integrations/sentry";
  *   installSentry(Sentry, {
  *     apiKey: process.env.AXONPUSH_API_KEY!,
- *     channelId: 42,
+ *     channelId: "ch-uuid",
  *     environment: "production",
  *     release: process.env.RELEASE,
  *   });
  */
 
 import { logger } from "../logger.js";
+import { type ChannelIdInput, coerceChannelId } from "./_base.js";
 
 const ENV_PRECEDENCE = [
   "AXONPUSH_ENVIRONMENT",
@@ -36,7 +45,7 @@ function detectEnvironment(): string | undefined {
 
 export interface InstallSentryOptions {
   apiKey?: string;
-  channelId?: number;
+  channelId?: ChannelIdInput;
   host?: string;
   dsn?: string;
   environment?: string;
@@ -48,20 +57,20 @@ export interface SentryLike {
   init: (options: Record<string, unknown>) => unknown;
 }
 
-export function buildDsn(apiKey: string, channelId: number, host: string): string {
+export function buildDsn(apiKey: string, channelId: ChannelIdInput, host: string): string {
   const scheme = host.startsWith("localhost") || host.startsWith("127.") ? "http" : "https";
-  return `${scheme}://${apiKey}@${host}/${channelId}`;
+  return `${scheme}://${apiKey}@${host}/${coerceChannelId(channelId)}`;
 }
 
 export function installSentry(sentry: SentryLike, options: InstallSentryOptions = {}): void {
   let dsn = options.dsn;
   if (!dsn) {
     const apiKey = options.apiKey ?? process.env.AXONPUSH_API_KEY;
-    const channelIdRaw =
+    const channelIdRaw: ChannelIdInput | undefined =
       options.channelId !== undefined
         ? options.channelId
         : process.env.AXONPUSH_CHANNEL_ID
-          ? Number(process.env.AXONPUSH_CHANNEL_ID)
+          ? process.env.AXONPUSH_CHANNEL_ID
           : undefined;
     const host = options.host ?? process.env.AXONPUSH_HOST ?? "api.axonpush.xyz";
     if (!apiKey || !channelIdRaw) {

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import type { AxonPush } from "../client.js";
-import type { PublishParams } from "../resources/events.js";
-import { createAxonPushWinstonTransport } from "./winston.js";
+import type { AxonPush } from "../../client.js";
+import { createAxonPushWinstonTransport } from "../../integrations/winston.js";
+import type { PublishParams } from "../../resources/events.js";
 
 function makeFakeClient() {
   const published: PublishParams[] = [];
@@ -27,7 +27,7 @@ describe("winston transport", () => {
     const { client, published } = makeFakeClient();
     const transport = (await createAxonPushWinstonTransport({
       client,
-      channelId: 11,
+      channelId: "ch-1",
       serviceName: "winston-svc",
     })) as AxonPushTransport;
 
@@ -38,7 +38,7 @@ describe("winston transport", () => {
 
     expect(published).toHaveLength(1);
     const event = published[0]!;
-    expect(event.channelId).toBe(11);
+    expect(event.channelId).toBe("ch-1");
     expect(event.eventType).toBe("app.log");
     expect(event.identifier).toBe("winston");
     const payload = event.payload as Record<string, unknown>;
@@ -57,7 +57,7 @@ describe("winston transport", () => {
     const { client, published } = makeFakeClient();
     const transport = (await createAxonPushWinstonTransport({
       client,
-      channelId: 11,
+      channelId: "ch-1",
     })) as AxonPushTransport;
 
     const cases: Array<[string, number, string]> = [

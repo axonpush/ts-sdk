@@ -1,18 +1,35 @@
 import type { AxonPush } from "../client.js";
 import type { TraceContext } from "../tracing.js";
-import { type IntegrationConfig, initTrace, safePublish, truncate } from "./_base.js";
+import {
+  coerceChannelId,
+  type IntegrationConfig,
+  initTrace,
+  safePublish,
+  truncate,
+} from "./_base.js";
 import { AxonPushCallbackHandler } from "./langchain.js";
 
+/**
+ * LangGraph callback handler.
+ *
+ * Extends {@link AxonPushCallbackHandler} with two extra events
+ * (`graph.node.start` / `graph.node.end`) that record the per-node
+ * traversal of a `StateGraph`. The callback uses LangChain's run-tree
+ * `runId`/`parentRunId` for trace stitching.
+ *
+ * Tested against `@langchain/langgraph@^0.4` (which still consumes
+ * LangChain.js's callback interface).
+ */
 export class AxonPushLangGraphHandler extends AxonPushCallbackHandler {
   private _client: AxonPush;
-  private _channelId: number;
+  private _channelId: string;
   private _agentId: string;
   private _trace: TraceContext;
 
   constructor(config: IntegrationConfig) {
     super({ ...config, agentId: config.agentId ?? "langgraph" });
     this._client = config.client;
-    this._channelId = config.channelId;
+    this._channelId = coerceChannelId(config.channelId);
     this._agentId = config.agentId ?? "langgraph";
     this._trace = initTrace(config.traceId);
   }
@@ -22,12 +39,12 @@ export class AxonPushLangGraphHandler extends AxonPushCallbackHandler {
     inputs: Record<string, unknown>,
     runId?: string,
     parentRunId?: string,
-  ) {
+  ): void {
     super.handleChainStart(serialized, inputs, runId, parentRunId);
 
     const nodeName = serialized?.name;
     if (nodeName) {
-      safePublish(
+      void safePublish(
         this._client,
         this._channelId,
         "graph.node.start",
@@ -36,16 +53,25 @@ export class AxonPushLangGraphHandler extends AxonPushCallbackHandler {
         {
           agentId: this._agentId,
           trace: this._trace,
-          metadata: { framework: "langgraph", node: nodeName },
+          metadata: {
+            framework: "langgraph",
+            node: nodeName,
+            ...(runId ? { langchain_run_id: runId } : {}),
+            ...(parentRunId ? { langchain_parent_run_id: parentRunId } : {}),
+          },
         },
       );
     }
   }
 
-  override handleChainEnd(outputs: Record<string, unknown>, runId?: string, parentRunId?: string) {
+  override handleChainEnd(
+    outputs: Record<string, unknown>,
+    runId?: string,
+    parentRunId?: string,
+  ): void {
     super.handleChainEnd(outputs, runId, parentRunId);
 
-    safePublish(
+    void safePublish(
       this._client,
       this._channelId,
       "graph.node.end",
@@ -54,7 +80,11 @@ export class AxonPushLangGraphHandler extends AxonPushCallbackHandler {
       {
         agentId: this._agentId,
         trace: this._trace,
-        metadata: { framework: "langgraph" },
+        metadata: {
+          framework: "langgraph",
+          ...(runId ? { langchain_run_id: runId } : {}),
+          ...(parentRunId ? { langchain_parent_run_id: parentRunId } : {}),
+        },
       },
     );
   }

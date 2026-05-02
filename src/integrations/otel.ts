@@ -3,6 +3,7 @@ import type { EventType } from "../index.js";
 import { logger as sdkLogger } from "../logger.js";
 import type { PublishParams } from "../resources/events.js";
 import {
+  coerceChannelId,
   dispatchPublish,
   type IntegrationConfig,
   initTrace,
@@ -15,10 +16,34 @@ export { flushAfterInvocation } from "./_publisher.js";
 /**
  * OpenTelemetry SpanExporter for AxonPush.
  *
- * Implements the OTel `SpanExporter` interface so that any Node.js service
- * already instrumented with `@opentelemetry/sdk-trace-node` can ship spans
- * to AxonPush by adding this exporter to its tracer provider:
+ * Implements the OTel `SpanExporter` interface so that any Node.js
+ * service already instrumented with `@opentelemetry/sdk-trace-node` can
+ * ship spans to AxonPush by adding this exporter to its tracer
+ * provider.
  *
+ * Tested against `@opentelemetry/api@^1.7` and
+ * `@opentelemetry/sdk-trace-base@^1.18`. Both are OPTIONAL peer deps:
+ *   npm install @opentelemetry/api @opentelemetry/sdk-trace-base
+ *
+ * **Protocol**: this exporter ships each span via
+ * `client.events.publish(...)` as an `app.span` event with an
+ * OTLP-shaped JSON payload (`name`, `traceId`, `spanId`,
+ * `startTimeUnixNano`, `endTimeUnixNano`, `kind`, `status`,
+ * `attributes`, `events`, `links`, `resource`, `scope`). The backend
+ * also exposes a native OTLP/HTTP ingest at `/v1/traces` (and
+ * `/v1/logs`) which accepts protobuf or JSON — for raw OTLP throughput
+ * point your collector at that endpoint instead of using this exporter.
+ *
+ * Span exports are **non-blocking** by default: each span is pushed
+ * onto a bounded in-memory queue and drained by a background task. The
+ * OTel `forceFlush()` hook drains the queue synchronously — it's
+ * called by the tracer provider before shutdown, so a
+ * `provider.shutdown()` at process exit guarantees pending spans are
+ * delivered. In a Lambda handler, call `exporter.forceFlush()` (or wrap
+ * the handler with `flushAfterInvocation`) at the end of each
+ * invocation.
+ *
+ * Usage:
  *   import { NodeTracerProvider } from '@opentelemetry/sdk-trace-node';
  *   import { SimpleSpanProcessor } from '@opentelemetry/sdk-trace-base';
  *   import { AxonPush } from '@axonpush/sdk';
@@ -29,24 +54,12 @@ export { flushAfterInvocation } from "./_publisher.js";
  *     new SimpleSpanProcessor(
  *       new AxonPushSpanExporter({
  *         client: new AxonPush({ apiKey: '...' }),
- *         channelId: 42,
+ *         channelId: 'ch-uuid',
  *         serviceName: 'my-api',
  *       }),
  *     ),
  *   );
  *   provider.register();
- *
- * Span exports are **non-blocking** by default: each span is pushed onto a
- * bounded in-memory queue and drained by a background task. The OTel
- * `forceFlush()` hook drains the queue synchronously — it's called by the
- * tracer provider before shutdown, so a `provider.shutdown()` at process
- * exit guarantees pending spans are delivered. In a Lambda handler, call
- * `exporter.forceFlush()` (or wrap the handler with `flushAfterInvocation`)
- * at the end of each invocation.
- *
- * `@opentelemetry/api` and `@opentelemetry/sdk-trace-base` are OPTIONAL peer
- * dependencies. Install them alongside the SDK:
- *   npm install @opentelemetry/api @opentelemetry/sdk-trace-base
  */
 
 export interface OtelExporterConfig extends IntegrationConfig {
@@ -89,14 +102,14 @@ const EXPORT_FAILED = 1;
 
 export class AxonPushSpanExporter {
   private readonly client: AxonPush;
-  private readonly channelId: number;
+  private readonly channelId: string;
   private readonly trace: ReturnType<typeof initTrace>;
   private readonly resourceOverride: Record<string, unknown>;
   private readonly holder: PublisherHolder;
 
   constructor(config: OtelExporterConfig) {
     this.client = config.client;
-    this.channelId = config.channelId;
+    this.channelId = coerceChannelId(config.channelId);
     this.trace = initTrace(config.traceId);
     this.holder = makePublisher(config.client, config, "otelExporter");
 

@@ -42,13 +42,13 @@ export type AxonEvent = import("./schema").components["schemas"]["EventResponseD
 export type Channel = import("./schema").components["schemas"]["ChannelResponseDto"];
 export type App = import("./schema").components["schemas"]["AppResponseDto"];
 export type Environment = import("./schema").components["schemas"]["EnvironmentResponseDto"];
-export type WebhookEndpoint = import("./schema").components["schemas"]["WebhookEndpointResponseDto"];
-export type WebhookDelivery = import("./schema").components["schemas"]["WebhookDeliveryResponseDto"];
+export type WebhookEndpoint =
+  import("./schema").components["schemas"]["WebhookEndpointResponseDto"];
+export type WebhookDelivery =
+  import("./schema").components["schemas"]["WebhookDeliveryResponseDto"];
 export type ApiKey = import("./schema").components["schemas"]["ApiKeyResponseDto"];
 export type CreateEventDto = import("./schema").components["schemas"]["CreateEventDto"];
 export type EventType = import("./schema").components["schemas"]["CreateEventDto"]["eventType"];
-
-export { EnvironmentsResource } from "./resources/environments.js";
 
 export {
   AxonPushAnthropicTracer,
@@ -84,3 +84,4 @@ export {
   setupConsoleCapture,
   type WinstonTransportConfig,
 } from "./integrations/index.js";
+export { EnvironmentsResource } from "./resources/environments.js";

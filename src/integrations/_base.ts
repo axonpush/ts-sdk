@@ -8,20 +8,61 @@ import {
   type BackgroundPublisher,
   type BackgroundPublisherOptions,
   detectServerless,
+  type OverflowPolicy,
   BackgroundPublisher as Publisher,
   type PublisherMode,
 } from "./_publisher.js";
 
+export { inPublisherScope, runInPublisherScope } from "./_publisher.js";
+
+/**
+ * Public boundary type for `channelId` arguments accepted by every
+ * integration. v0.0.4 allowed `number`; v0.0.5 standardises on string
+ * UUIDs but keeps the `number` form working with a deprecation warning
+ * routed through {@link coerceChannelId}.
+ */
+export type ChannelIdInput = string | number;
+
+/**
+ * Coerce a v0.0.4-style numeric channelId to the v0.0.5 string form.
+ * Logs a single `console.warn` per coercion so callers can migrate
+ * incrementally.
+ */
+export function coerceChannelId(value: ChannelIdInput): string {
+  if (typeof value === "number") {
+    console.warn("[axonpush] channelId as number is deprecated; pass a string UUID instead.");
+    return String(value);
+  }
+  return value;
+}
+
 export interface IntegrationConfig {
   client: AxonPush;
-  channelId: number;
+  channelId: ChannelIdInput;
   agentId?: string;
   traceId?: string;
   mode?: PublisherMode;
   queueSize?: number;
+  overflowPolicy?: OverflowPolicy;
   shutdownTimeoutMs?: number;
   concurrency?: number;
   bullmqOptions?: BullMQPublisherOptions;
+}
+
+/**
+ * Narrow shim around the SHARED-CONTRACT-guaranteed
+ * `client.events.publish(...)` chokepoint. Stream A's lazy
+ * `AxonPush.events` typing (`Promise<unknown>`) is a transitional
+ * detail — integrations rely only on the call shape promised in §3 of
+ * `SHARED-CONTRACT.md`, so we cast through this helper rather than
+ * coupling to the shifting facade type.
+ */
+interface PublishLike {
+  events: { publish(params: PublishParams): Promise<unknown> };
+}
+
+function asPublisher(client: AxonPush): PublishLike {
+  return client as unknown as PublishLike;
 }
 
 export function truncate(value: unknown, maxLen = 2000): unknown {
@@ -37,7 +78,7 @@ export function truncate(value: unknown, maxLen = 2000): unknown {
 
 export async function safePublish(
   client: AxonPush,
-  channelId: number,
+  channelId: ChannelIdInput,
   identifier: string,
   eventType: EventType,
   payload: Record<string, unknown>,
@@ -48,10 +89,10 @@ export async function safePublish(
   },
 ): Promise<void> {
   try {
-    await client.events.publish({
+    await asPublisher(client).events.publish({
       identifier,
       payload: payload as Record<string, never>,
-      channelId,
+      channelId: coerceChannelId(channelId),
       agentId: opts.agentId,
       traceId: opts.trace.traceId,
       spanId: opts.trace.nextSpanId(),
@@ -65,7 +106,7 @@ export async function safePublish(
 
 export async function safePublishParams(client: AxonPush, params: PublishParams): Promise<void> {
   try {
-    await client.events.publish(params);
+    await asPublisher(client).events.publish(params);
   } catch {
     logger.warn(`failed to emit event "${params.identifier}", suppressing.`);
   }
@@ -101,6 +142,7 @@ export function makePublisher(
   }
   const opts: BackgroundPublisherOptions = {};
   if (config.queueSize !== undefined) opts.queueSize = config.queueSize;
+  if (config.overflowPolicy !== undefined) opts.overflowPolicy = config.overflowPolicy;
   if (config.shutdownTimeoutMs !== undefined) opts.shutdownTimeoutMs = config.shutdownTimeoutMs;
   if (config.concurrency !== undefined) opts.concurrency = config.concurrency;
 

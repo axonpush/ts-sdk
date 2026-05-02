@@ -3,9 +3,12 @@ import type { EventType } from "../index.js";
 import { logger as sdkLogger } from "../logger.js";
 import type { PublishParams } from "../resources/events.js";
 import {
+  type ChannelIdInput,
+  coerceChannelId,
   dispatchPublish,
   type IntegrationConfig,
   initTrace,
+  inPublisherScope,
   makePublisher,
   type PublisherHolder,
 } from "./_base.js";
@@ -26,7 +29,11 @@ export { flushAfterInvocation } from "./_publisher.js";
  * invocation, end of a test) to guarantee delivery, or `stream.close()`
  * on graceful shutdown.
  *
- * Pino is an OPTIONAL peer dependency — install it alongside the SDK:
+ * Re-entrancy is handled internally: when the publisher itself logs (via
+ * the SDK's `consola` instance), records produced inside the publisher
+ * scope are skipped so logs cannot loop back through this transport.
+ *
+ * Tested against `pino@^9`. Pino is an OPTIONAL peer dependency:
  *   npm install pino
  *
  * Usage:
@@ -37,7 +44,7 @@ export { flushAfterInvocation } from "./_publisher.js";
  *   const client = new AxonPush({ apiKey: '...' });
  *   const stream = createAxonPushPinoStream({
  *     client,
- *     channelId: 42,
+ *     channelId: 'ch-uuid',
  *     serviceName: 'my-api',
  *   });
  *   const log = pino({ level: 'info' }, stream);
@@ -67,7 +74,7 @@ export interface AxonPushPinoStream {
 
 export function createAxonPushPinoStream(config: PinoStreamConfig): AxonPushPinoStream {
   const client = config.client;
-  const channelId = config.channelId;
+  const channelId = coerceChannelId(config.channelId);
   const trace = initTrace(config.traceId);
   const eventType: EventType = "app.log";
   const holder = makePublisher(client, config, "pinoStream");
@@ -79,6 +86,8 @@ export function createAxonPushPinoStream(config: PinoStreamConfig): AxonPushPino
   const resourceOrUndefined = Object.keys(resource).length > 0 ? resource : undefined;
 
   const write = (chunk: string): void => {
+    if (inPublisherScope()) return;
+
     const trimmed = chunk.trim();
     if (!trimmed) return;
 
@@ -128,7 +137,7 @@ export function createAxonPushPinoStream(config: PinoStreamConfig): AxonPushPino
 function emit(
   client: AxonPush,
   holder: PublisherHolder,
-  channelId: number,
+  channelId: ChannelIdInput,
   trace: ReturnType<typeof initTrace>,
   eventType: EventType,
   payload: Record<string, unknown>,
@@ -137,7 +146,7 @@ function emit(
     const params: PublishParams = {
       identifier: "pino",
       payload: payload as Record<string, never>,
-      channelId,
+      channelId: coerceChannelId(channelId),
       traceId: trace.traceId,
       spanId: trace.nextSpanId(),
       eventType,

@@ -1,5 +1,23 @@
 import type { EventType } from "../index.js";
-import { type IntegrationConfig, initTrace, safePublish, truncate } from "./_base.js";
+import {
+  coerceChannelId,
+  type IntegrationConfig,
+  initTrace,
+  safePublish,
+  truncate,
+} from "./_base.js";
+
+/**
+ * Google Agent Development Kit (ADK) callbacks.
+ *
+ * Returns an object compatible with ADK's `before*` / `after*` hook
+ * shape. Wire it into your `Agent` constructor's callback config.
+ *
+ * Tested against the public Google ADK preview (`@google/adk` ^0.1).
+ * The hook surface is still in flux; this integration tracks the
+ * `before/after Agent`, `before/after Model`, `before/after Tool` quad
+ * which has been stable since the developer preview.
+ */
 
 interface ADKCallbacks {
   beforeAgent: (agent: any) => void;
@@ -12,12 +30,12 @@ interface ADKCallbacks {
 
 export function axonPushADKCallbacks(config: IntegrationConfig): ADKCallbacks {
   const client = config.client;
-  const channelId = config.channelId;
+  const channelId = coerceChannelId(config.channelId);
   const agentId = config.agentId ?? "google-adk";
   const trace = initTrace(config.traceId);
 
-  function emit(identifier: string, eventType: EventType, payload: Record<string, unknown>) {
-    safePublish(client, channelId, identifier, eventType, payload, {
+  function emit(identifier: string, eventType: EventType, payload: Record<string, unknown>): void {
+    void safePublish(client, channelId, identifier, eventType, payload, {
       agentId,
       trace,
       metadata: { framework: "google-adk" },

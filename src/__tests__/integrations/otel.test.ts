@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import type { AxonPush } from "../client.js";
-import type { PublishParams } from "../resources/events.js";
-import { AxonPushSpanExporter } from "./otel.js";
+import type { AxonPush } from "../../client.js";
+import { AxonPushSpanExporter } from "../../integrations/otel.js";
+import type { PublishParams } from "../../resources/events.js";
 
 function makeFakeClient() {
   const published: PublishParams[] = [];
@@ -41,7 +41,7 @@ describe("AxonPushSpanExporter", () => {
     const { client, published } = makeFakeClient();
     const exporter = new AxonPushSpanExporter({
       client,
-      channelId: 9,
+      channelId: "ch-1",
       serviceName: "otel-svc",
     });
     const span = makeFakeSpan();
@@ -56,7 +56,7 @@ describe("AxonPushSpanExporter", () => {
 
     expect(published).toHaveLength(1);
     const event = published[0]!;
-    expect(event.channelId).toBe(9);
+    expect(event.channelId).toBe("ch-1");
     expect(event.eventType).toBe("app.span");
     expect(event.identifier).toBe("test-span");
     const payload = event.payload as Record<string, unknown>;
@@ -73,7 +73,7 @@ describe("AxonPushSpanExporter", () => {
 
   it("exports multiple spans in a single batch", async () => {
     const { client, published } = makeFakeClient();
-    const exporter = new AxonPushSpanExporter({ client, channelId: 9 });
+    const exporter = new AxonPushSpanExporter({ client, channelId: "ch-1" });
     const spans = [
       makeFakeSpan({ name: "a" }),
       makeFakeSpan({ name: "b" }),
@@ -96,7 +96,7 @@ describe("AxonPushSpanExporter", () => {
 
   it("propagates parent span id from parentSpanContext", async () => {
     const { client, published } = makeFakeClient();
-    const exporter = new AxonPushSpanExporter({ client, channelId: 9 });
+    const exporter = new AxonPushSpanExporter({ client, channelId: "ch-1" });
     const span = makeFakeSpan({ parentSpanContext: { spanId: "c".repeat(16) } });
 
     await new Promise<void>((resolve, reject) => {
@@ -115,7 +115,7 @@ describe("AxonPushSpanExporter", () => {
 
   it("shutdown drains pending spans and closes the publisher", async () => {
     const { client, published } = makeFakeClient();
-    const exporter = new AxonPushSpanExporter({ client, channelId: 9 });
+    const exporter = new AxonPushSpanExporter({ client, channelId: "ch-1" });
     const span = makeFakeSpan();
 
     await new Promise<void>((resolve, reject) => {

@@ -1,20 +1,40 @@
 import type { AxonPush } from "../client.js";
 import type { EventType } from "../index.js";
 import type { TraceContext } from "../tracing.js";
-import { type IntegrationConfig, initTrace, safePublish, truncate } from "./_base.js";
+import {
+  coerceChannelId,
+  type IntegrationConfig,
+  initTrace,
+  safePublish,
+  truncate,
+} from "./_base.js";
 
+/**
+ * LangChain.js callback handler.
+ *
+ * Subclasses LangChain's loose callback interface — register an
+ * instance via `runManager.callbacks.push(handler)` or supply through
+ * the `callbacks` option on a chain/LLM constructor.
+ *
+ * The handler maps LangChain's `runId` / `parentRunId` to AxonPush
+ * trace metadata so that traces stitched across LangChain's own runtree
+ * remain navigable in the AxonPush UI.
+ *
+ * Tested against `langchain@^0.3` / `@langchain/core@^0.3`. Install:
+ *   npm install @langchain/core
+ */
 export class AxonPushCallbackHandler {
   name = "AxonPushCallbackHandler";
 
   private client: AxonPush;
-  private channelId: number;
+  private channelId: string;
   private agentId: string;
   private trace: TraceContext;
   private baseMeta: Record<string, unknown>;
 
   constructor(config: IntegrationConfig) {
     this.client = config.client;
-    this.channelId = config.channelId;
+    this.channelId = coerceChannelId(config.channelId);
     this.agentId = config.agentId ?? "langchain";
     this.trace = initTrace(config.traceId);
     this.baseMeta = { framework: "langchain" };
@@ -26,12 +46,12 @@ export class AxonPushCallbackHandler {
     payload: Record<string, unknown>,
     runId?: string,
     parentRunId?: string,
-  ) {
+  ): void {
     const meta = { ...this.baseMeta } as Record<string, unknown>;
     if (runId) meta.langchain_run_id = runId;
     if (parentRunId) meta.langchain_parent_run_id = parentRunId;
 
-    safePublish(this.client, this.channelId, identifier, eventType, payload, {
+    void safePublish(this.client, this.channelId, identifier, eventType, payload, {
       agentId: this.agentId,
       trace: this.trace,
       metadata: meta,
@@ -43,7 +63,7 @@ export class AxonPushCallbackHandler {
     inputs: Record<string, unknown>,
     runId?: string,
     parentRunId?: string,
-  ) {
+  ): void {
     this.emit(
       "chain.start",
       "agent.start",
@@ -56,11 +76,11 @@ export class AxonPushCallbackHandler {
     );
   }
 
-  handleChainEnd(outputs: Record<string, unknown>, runId?: string, parentRunId?: string) {
+  handleChainEnd(outputs: Record<string, unknown>, runId?: string, parentRunId?: string): void {
     this.emit("chain.end", "agent.end", { outputs: truncate(outputs) }, runId, parentRunId);
   }
 
-  handleChainError(err: Error, runId?: string, parentRunId?: string) {
+  handleChainError(err: Error, runId?: string, parentRunId?: string): void {
     this.emit(
       "chain.error",
       "agent.error",
@@ -75,7 +95,7 @@ export class AxonPushCallbackHandler {
     prompts: string[],
     runId?: string,
     parentRunId?: string,
-  ) {
+  ): void {
     this.emit(
       "llm.start",
       "agent.start",
@@ -88,7 +108,7 @@ export class AxonPushCallbackHandler {
     );
   }
 
-  handleLLMEnd(output: { generations?: any[] }, runId?: string, parentRunId?: string) {
+  handleLLMEnd(output: { generations?: any[] }, runId?: string, parentRunId?: string): void {
     this.emit(
       "llm.end",
       "agent.end",
@@ -98,7 +118,7 @@ export class AxonPushCallbackHandler {
     );
   }
 
-  handleLLMNewToken(token: string, _idx?: any, runId?: string, parentRunId?: string) {
+  handleLLMNewToken(token: string, _idx?: any, runId?: string, parentRunId?: string): void {
     this.emit("llm.token", "agent.llm.token", { token }, runId, parentRunId);
   }
 
@@ -107,7 +127,7 @@ export class AxonPushCallbackHandler {
     input: string,
     runId?: string,
     parentRunId?: string,
-  ) {
+  ): void {
     const toolName = serialized?.name ?? "unknown";
     this.emit(
       `tool.${toolName}.start`,
@@ -118,11 +138,11 @@ export class AxonPushCallbackHandler {
     );
   }
 
-  handleToolEnd(output: string, runId?: string, parentRunId?: string) {
+  handleToolEnd(output: string, runId?: string, parentRunId?: string): void {
     this.emit("tool.end", "agent.tool_call.end", { output: truncate(output) }, runId, parentRunId);
   }
 
-  handleToolError(err: Error, runId?: string, parentRunId?: string) {
+  handleToolError(err: Error, runId?: string, parentRunId?: string): void {
     this.emit(
       "tool.error",
       "agent.error",
@@ -132,7 +152,7 @@ export class AxonPushCallbackHandler {
     );
   }
 
-  handleLLMError(err: Error, runId?: string, parentRunId?: string) {
+  handleLLMError(err: Error, runId?: string, parentRunId?: string): void {
     this.emit(
       "llm.error",
       "agent.error",
