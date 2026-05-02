@@ -1,39 +1,99 @@
-import type { components } from "../schema";
-import type { TransportClient } from "../transport.js";
+import {
+  traceControllerGetDashboardStats,
+  traceControllerGetTraceEvents,
+  traceControllerGetTraceSummary,
+  traceControllerListTraces,
+} from "../_internal/api/sdk.gen.js";
+import type {
+  TraceControllerGetDashboardStatsResponse,
+  TraceControllerListTracesResponse,
+} from "../_internal/api/types.gen.js";
+import type { EventDetails, TraceSummary } from "../models.js";
+import type { ResourceClient } from "./_client.js";
 
-type Event = components["schemas"]["EventResponseDto"];
+/** Pagination & filters for {@link TracesResource.list}. */
+export interface TraceListParams {
+  page?: number;
+  /** Page size. */
+  limit?: number;
+  appId?: string;
+  environment?: string;
+}
 
+/** Filters for {@link TracesResource.stats}. */
+export interface TraceStatsParams {
+  appId?: string;
+  environment?: string;
+}
+
+/** Filters for trace-scoped reads. */
+export interface TraceScopedParams {
+  appId?: string;
+  environment?: string;
+}
+
+export type TraceListPage = NonNullable<TraceControllerListTracesResponse>;
+export type DashboardStats = NonNullable<TraceControllerGetDashboardStatsResponse>;
+
+/** Read aggregated traces and per-trace events/summaries. */
 export class TracesResource {
-  constructor(
-    private api: TransportClient,
-    _failOpen: boolean,
-  ) {}
+  constructor(private readonly client: ResourceClient) {}
 
-  async list(opts: { page?: number; limit?: number } = {}) {
-    const { data } = await this.api.GET("/traces", {
-      params: {
-        query: { page: opts.page ?? 1, limit: opts.limit ?? 20 },
-      },
+  /**
+   * List trace summaries, newest-first.
+   *
+   * @param params - Pagination & filter parameters.
+   * @returns Paginated trace list, or `null` on fail-open error.
+   */
+  async list(params: TraceListParams = {}): Promise<TraceListPage | null> {
+    return this.client.invoke(traceControllerListTraces, {
+      query: this.applyEnv(params),
     });
-    return data;
   }
 
-  async getEvents(traceId: string): Promise<Event[]> {
-    const { data } = await this.api.GET("/traces/{traceId}/events", {
-      params: { path: { traceId } },
+  /**
+   * Fetch aggregated dashboard stats for the org.
+   *
+   * @param params - Optional filter parameters.
+   * @returns Dashboard stats, or `null` on fail-open error.
+   */
+  async stats(params: TraceStatsParams = {}): Promise<DashboardStats | null> {
+    return this.client.invoke(traceControllerGetDashboardStats, {
+      query: this.applyEnv(params),
     });
-    return data ?? [];
   }
 
-  async getSummary(traceId: string) {
-    const { data } = await this.api.GET("/traces/{traceId}/summary", {
-      params: { path: { traceId } },
+  /**
+   * Fetch all events belonging to a trace, ordered by `createdAt` ASC.
+   *
+   * @param traceId - Trace UUID.
+   * @param params - Optional filter parameters.
+   * @returns Events, or `null` on fail-open error.
+   */
+  async events(traceId: string, params: TraceScopedParams = {}): Promise<EventDetails[] | null> {
+    return this.client.invoke(traceControllerGetTraceEvents, {
+      path: { traceId },
+      query: this.applyEnv(params),
     });
-    return data;
   }
 
-  async getStats() {
-    const { data } = await this.api.GET("/traces/stats");
-    return data;
+  /**
+   * Fetch the summary for a single trace.
+   *
+   * @param traceId - Trace UUID.
+   * @param params - Optional filter parameters.
+   * @returns Trace summary, or `null` on fail-open error.
+   */
+  async summary(traceId: string, params: TraceScopedParams = {}): Promise<TraceSummary | null> {
+    return this.client.invoke(traceControllerGetTraceSummary, {
+      path: { traceId },
+      query: this.applyEnv(params),
+    }) as Promise<TraceSummary | null>;
+  }
+
+  private applyEnv<T extends { environment?: string }>(p: T): T {
+    if (p.environment !== undefined) return p;
+    const env = this.client.environment;
+    return env !== undefined ? { ...p, environment: env } : p;
   }
 }

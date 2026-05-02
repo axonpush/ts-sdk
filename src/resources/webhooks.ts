@@ -1,43 +1,62 @@
-import type { components } from "../schema";
-import type { TransportClient } from "../transport.js";
+import {
+  webhookControllerCreateEndpoint,
+  webhookControllerDeleteEndpoint,
+  webhookControllerGetDeliveries,
+  webhookControllerListEndpoints,
+} from "../_internal/api/sdk.gen.js";
+import type { CreateWebhookEndpointDto, MessageResponseDto } from "../_internal/api/types.gen.js";
+import type {
+  WebhookDelivery,
+  WebhookEndpoint,
+  WebhookEndpointCreateResponseDto,
+} from "../models.js";
+import type { ResourceClient } from "./_client.js";
 
-type WebhookEndpoint = components["schemas"]["WebhookEndpointResponseDto"];
-type WebhookEndpointCreateResponse = components["schemas"]["WebhookEndpointCreateResponseDto"];
-type WebhookDelivery = components["schemas"]["WebhookDeliveryResponseDto"];
-type CreateWebhookEndpointDto = components["schemas"]["CreateWebhookEndpointDto"];
+export type WebhookEndpointCreateInput = CreateWebhookEndpointDto;
 
+/** Manage outbound webhook endpoints and inspect their delivery history. */
 export class WebhooksResource {
-  constructor(
-    private api: TransportClient,
-    _failOpen: boolean,
-  ) {}
+  constructor(private readonly client: ResourceClient) {}
 
+  /**
+   * Create a webhook endpoint subscribed to a channel.
+   *
+   * @param input - Endpoint fields; see {@link WebhookEndpointCreateInput}.
+   * @returns The created endpoint (with raw signing secret), or `null` on fail-open error.
+   */
   async createEndpoint(
-    params: CreateWebhookEndpointDto,
-  ): Promise<WebhookEndpointCreateResponse | undefined> {
-    const { data } = await this.api.POST("/webhooks/endpoints", {
-      body: params,
-    });
-    return data;
+    input: WebhookEndpointCreateInput,
+  ): Promise<WebhookEndpointCreateResponseDto | null> {
+    return this.client.invoke(webhookControllerCreateEndpoint, { body: input });
   }
 
-  async listEndpoints(channelId: string): Promise<WebhookEndpoint[]> {
-    const { data } = await this.api.GET("/webhooks/endpoints/channel/{channelId}", {
-      params: { path: { channelId } },
-    });
-    return data ?? [];
+  /**
+   * List endpoints subscribed to a channel.
+   *
+   * @param channelId - Channel UUID.
+   * @returns Endpoints, or `null` on fail-open error.
+   */
+  async listEndpoints(channelId: string): Promise<WebhookEndpoint[] | null> {
+    return this.client.invoke(webhookControllerListEndpoints, { path: { channelId } });
   }
 
-  async deleteEndpoint(id: string): Promise<void> {
-    await this.api.DELETE("/webhooks/endpoints/{id}", {
-      params: { path: { id } },
-    });
+  /**
+   * Delete a webhook endpoint.
+   *
+   * @param id - Endpoint UUID.
+   * @returns Server ack, or `null` on fail-open error.
+   */
+  async deleteEndpoint(id: string): Promise<MessageResponseDto | null> {
+    return this.client.invoke(webhookControllerDeleteEndpoint, { path: { id } });
   }
 
-  async getDeliveries(endpointId: string): Promise<WebhookDelivery[]> {
-    const { data } = await this.api.GET("/webhooks/deliveries/{endpointId}", {
-      params: { path: { endpointId } },
-    });
-    return data ?? [];
+  /**
+   * Fetch recent delivery attempts for an endpoint.
+   *
+   * @param endpointId - Endpoint UUID.
+   * @returns Delivery records, or `null` on fail-open error.
+   */
+  async deliveries(endpointId: string): Promise<WebhookDelivery[] | null> {
+    return this.client.invoke(webhookControllerGetDeliveries, { path: { endpointId } });
   }
 }

@@ -1,86 +1,71 @@
-import { currentEnvironment } from "../environment.js";
-import { type SSESubscribeOptions, SSESubscription } from "../realtime/sse.js";
-import type { components } from "../schema";
-import type { TransportClient } from "../transport.js";
+import {
+  channelControllerCreateChannel,
+  channelControllerDeleteChannel,
+  channelControllerGetChannel,
+  channelControllerUpdateChannel,
+} from "../_internal/api/sdk.gen.js";
+import type { OkResponseDto } from "../_internal/api/types.gen.js";
+import type { Channel } from "../models.js";
+import type { ResourceClient } from "./_client.js";
 
-type Channel = components["schemas"]["ChannelResponseDto"];
-
-export interface ChannelsResourceContext {
-  baseUrl: string;
-  headers: Record<string, string>;
-  orgId: string;
-  appId: string;
+/** Mutable channel fields accepted by {@link ChannelsResource.update}. */
+export interface ChannelUpdateFields {
+  name?: string;
 }
 
+/**
+ * Manage channels — the `appId`-scoped fan-out unit that events,
+ * webhooks, and realtime subscriptions hang off.
+ */
 export class ChannelsResource {
-  constructor(
-    private api: TransportClient,
-    _failOpen: boolean,
-    private ctx: ChannelsResourceContext,
-  ) {}
+  constructor(private readonly client: ResourceClient) {}
 
-  async create(name: string, appId: string): Promise<Channel | undefined> {
-    const { data } = await this.api.POST("/channel", {
-      body: { name, appId },
-    });
-    return data;
+  /**
+   * Fetch a channel by UUID.
+   *
+   * @param id - Channel UUID.
+   * @returns The channel, or `null` on fail-open error.
+   */
+  async get(id: string): Promise<Channel | null> {
+    return this.client.invoke(channelControllerGetChannel, { path: { id } });
   }
 
-  async get(id: string): Promise<Channel | undefined> {
-    const { data } = await this.api.GET("/channel/{id}", {
-      params: { path: { id } },
-    });
-    return data;
+  /**
+   * Create a channel under the given app.
+   *
+   * @param name - Human-readable channel name.
+   * @param appId - Parent app UUID.
+   * @returns The created channel, or `null` on fail-open error.
+   */
+  async create(name: string, appId: string): Promise<Channel | null> {
+    return this.client.invoke(channelControllerCreateChannel, { body: { name, appId } });
   }
 
-  async update(id: string): Promise<void> {
-    await this.api.PUT("/channel/{id}", {
-      params: { path: { id } },
-    });
+  /**
+   * Update mutable channel fields.
+   *
+   * The current backend definition does not declare a request body for
+   * the channel update endpoint; we still pass the patch through so
+   * the server can extend the contract without an SDK release.
+   *
+   * @param id - Channel UUID.
+   * @param fields - Patch object; only provided keys are applied.
+   * @returns Server ack, or `null` on fail-open error.
+   */
+  async update(id: string, fields: ChannelUpdateFields): Promise<OkResponseDto | null> {
+    return this.client.invoke(channelControllerUpdateChannel, {
+      path: { id },
+      body: fields,
+    } as unknown as Parameters<typeof channelControllerUpdateChannel>[0]);
   }
 
-  async delete(id: string): Promise<void> {
-    await this.api.DELETE("/channel/{id}", {
-      params: { path: { id } },
-    });
-  }
-
-  subscribe(channelId: string | number, opts?: SSESubscribeOptions): SSESubscription {
-    return new SSESubscription({
-      channelId,
-      ...(opts ? { filters: opts } : {}),
-      realtimeOpts: {
-        baseUrl: this.ctx.baseUrl,
-        headers: this.buildHeaders(opts?.environment),
-        orgId: this.ctx.orgId,
-        appId: this.ctx.appId,
-        ...(opts?.environment ? { defaultEnvironment: opts.environment } : {}),
-      },
-    });
-  }
-
-  subscribeToEvent(
-    channelId: string | number,
-    eventIdentifier: string,
-    opts?: SSESubscribeOptions,
-  ): SSESubscription {
-    return new SSESubscription({
-      channelId,
-      eventIdentifier,
-      ...(opts ? { filters: opts } : {}),
-      realtimeOpts: {
-        baseUrl: this.ctx.baseUrl,
-        headers: this.buildHeaders(opts?.environment),
-        orgId: this.ctx.orgId,
-        appId: this.ctx.appId,
-        ...(opts?.environment ? { defaultEnvironment: opts.environment } : {}),
-      },
-    });
-  }
-
-  private buildHeaders(envOverride?: string): Record<string, string> {
-    const env = envOverride ?? currentEnvironment();
-    if (!env) return this.ctx.headers;
-    return { ...this.ctx.headers, "X-Axonpush-Environment": env };
+  /**
+   * Soft-delete a channel.
+   *
+   * @param id - Channel UUID.
+   * @returns Server ack, or `null` on fail-open error.
+   */
+  async delete(id: string): Promise<OkResponseDto | null> {
+    return this.client.invoke(channelControllerDeleteChannel, { path: { id } });
   }
 }

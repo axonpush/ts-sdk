@@ -1,143 +1,173 @@
-import { currentEnvironment } from "../environment.js";
-import type { components } from "../schema";
-import { getOrCreateTrace } from "../tracing.js";
-import type { TransportClient } from "../transport.js";
+import {
+  eventControllerCreateEvent,
+  eventControllerListEvents,
+  eventsSearchControllerSearch,
+} from "../_internal/api/sdk.gen.js";
+import type {
+  CreateEventDto,
+  EventControllerListEventsData,
+  EventsSearchControllerSearchData,
+} from "../_internal/api/types.gen.js";
+import type { Event, EventDetails, EventListResponseDto, EventType } from "../models.js";
+import type { ResourceClient } from "./_client.js";
 
-type Event = components["schemas"]["EventResponseDto"];
-type EventIngestResponse = components["schemas"]["EventIngestResponseDto"];
-type CreateEventDto = components["schemas"]["CreateEventDto"];
-
-export type PublishParams = Omit<CreateEventDto, "channel_id" | "sync"> & {
-  channelId: string | number;
-  environment?: string;
-  sync?: boolean;
-};
-
-export interface EventQueryParams {
-  channelId?: string | number;
-  appId?: string;
-  environmentId?: string;
-  eventType?: string | string[];
+/** Parameters accepted by {@link EventsResource.publish}. */
+export interface PublishParams {
+  /** Stable, caller-supplied identifier — used for dedupe. */
+  identifier: string;
+  /** Free-form JSON body. */
+  payload: Record<string, unknown>;
+  /** Channel UUID this event belongs to. */
+  channelId: string;
+  /** Logical agent that produced this event. */
   agentId?: string;
+  /** Trace UUID to attach this event to. Auto-generated when omitted. */
   traceId?: string;
-  since?: string;
-  until?: string;
-  cursor?: string;
+  /** Span ID. Auto-generated from the trace context when omitted. */
+  spanId?: string;
+  /** Parent event ID — used to model hand-offs. */
+  parentEventId?: string;
+  /** Discriminator. Defaults to `"custom"` when omitted. */
+  eventType?: EventType;
+  /** Free-form metadata. */
+  metadata?: Record<string, unknown>;
+  /**
+   * Environment slug override. Only honoured when the API key has
+   * `allowEnvironmentOverride=true`. Falls through to the client's
+   * default environment when omitted.
+   */
+  environment?: string;
+  /**
+   * When true, wait for the event to be persisted to the DB before
+   * returning. Use only for audit-critical calls.
+   */
+  sync?: boolean;
+}
+
+/** Common pagination/filter options for {@link EventsResource.list} & {@link EventsResource.search}. */
+export interface EventListParams {
+  payloadFilter?: string;
+  /** 1–1000. Defaults server-side to 100. */
   limit?: number;
-  payloadFilter?: Record<string, unknown>;
+  cursor?: string;
+  /** ISO 8601 datetime (exclusive upper bound). */
+  until?: string;
+  /** ISO 8601 datetime (inclusive lower bound). */
+  since?: string;
+  traceId?: string;
+  agentId?: string;
+  /** Repeat or comma-separate to filter by multiple event types. */
+  eventType?: string[];
   environment?: string;
 }
 
-export interface EventListPage {
-  data: Event[];
-  cursor?: string;
+/** Search-specific filters (cross-channel). */
+export interface EventSearchParams extends EventListParams {
+  source?: string;
+  channelId?: string;
+  appId?: string;
 }
 
-const DEFAULT_LIMIT = 100;
-
+/**
+ * Publish, list, and search events.
+ *
+ * Resources never throw on transport errors when the client was
+ * constructed with `failOpen=true` (the default). Callers receive
+ * `null` instead.
+ */
 export class EventsResource {
-  constructor(
-    private api: TransportClient,
-    _failOpen: boolean,
-    private defaultEnvironment?: string,
-  ) {}
+  constructor(private readonly client: ResourceClient) {}
 
-  async publish(params: PublishParams): Promise<EventIngestResponse | undefined> {
-    const trace = getOrCreateTrace(params.traceId);
-    const spanId = params.spanId ?? trace.nextSpanId();
-
-    const effectiveEnv = params.environment ?? currentEnvironment() ?? this.defaultEnvironment;
-    const init: RequestInit | undefined = effectiveEnv
-      ? { headers: { "X-Axonpush-Environment": effectiveEnv } }
-      : undefined;
-
+  /**
+   * Publish a single event to a channel.
+   *
+   * @param params - Event parameters; see {@link PublishParams}.
+   * @returns The persisted event ingest response, or `null` when fail_open swallowed a transport error.
+   * @throws {AxonPushError} when fail_open is false and the call fails.
+   */
+  async publish(params: PublishParams): Promise<Event | null> {
+    const trace = this.client.getOrCreateTrace(params.traceId);
     const body: CreateEventDto = {
       identifier: params.identifier,
       payload: params.payload,
-      channel_id: String(params.channelId),
+      channel_id: params.channelId,
+      traceId: trace.traceId,
+      spanId: params.spanId ?? trace.nextSpanId(),
       eventType: params.eventType ?? "custom",
       sync: params.sync ?? false,
-      ...(params.agentId ? { agentId: params.agentId } : {}),
-      traceId: trace.traceId,
-      spanId,
-      ...(params.parentEventId ? { parentEventId: params.parentEventId } : {}),
-      ...(params.metadata ? { metadata: params.metadata } : {}),
-      ...(effectiveEnv ? { environment: effectiveEnv } : {}),
+      ...(params.agentId !== undefined ? { agentId: params.agentId } : {}),
+      ...(params.parentEventId !== undefined ? { parentEventId: params.parentEventId } : {}),
+      ...(params.metadata !== undefined ? { metadata: params.metadata } : {}),
+      ...((params.environment ?? this.client.environment)
+        ? { environment: params.environment ?? this.client.environment }
+        : {}),
     };
-
-    const { data } = await this.api.POST("/event", {
-      body,
-      ...(init ? { init } : {}),
-    });
-    return data;
+    return this.client.invoke(eventControllerCreateEvent, { body });
   }
 
-  async list(channelId: string | number, params: EventQueryParams = {}): Promise<EventListPage> {
-    const merged: EventQueryParams = { ...params, channelId };
-    return this.runQuery("/event/{channelId}/list", { channelId: String(channelId) }, merged);
+  /**
+   * List events on a single channel, ordered newest-first.
+   *
+   * @param channelId - Channel UUID.
+   * @param params - Optional pagination & filter parameters.
+   * @returns Paginated list response, or `null` on fail-open error.
+   */
+  async list(
+    channelId: string,
+    params: EventListParams = {},
+  ): Promise<EventListResponseDto | null> {
+    const args: Omit<EventControllerListEventsData, "url"> = {
+      path: { channelId },
+      query: this.buildListQuery(params),
+    };
+    return this.client.invoke(eventControllerListEvents, args);
   }
 
-  async search(params: EventQueryParams = {}): Promise<EventListPage> {
-    return this.runQuery("/events/search", undefined, params);
+  /**
+   * Search events across channels using server-side filters.
+   *
+   * @param params - Optional pagination & filter parameters.
+   * @returns Paginated search response, or `null` on fail-open error.
+   */
+  async search(params: EventSearchParams = {}): Promise<EventListResponseDto | null> {
+    const args: Omit<EventsSearchControllerSearchData, "url"> = {
+      query: this.buildSearchQuery(params),
+    };
+    return this.client.invoke(eventsSearchControllerSearch, args);
   }
 
-  private async runQuery(
-    path: string,
-    pathParams: Record<string, string> | undefined,
-    params: EventQueryParams,
-  ): Promise<EventListPage> {
-    const effectiveEnv = params.environment ?? currentEnvironment() ?? this.defaultEnvironment;
-    const query = serializeEventQuery(params);
-    if (effectiveEnv) query.environment = effectiveEnv;
+  private buildListQuery(p: EventListParams): EventControllerListEventsData["query"] {
+    const env = p.environment ?? this.client.environment;
+    return {
+      ...(p.payloadFilter !== undefined ? { payloadFilter: p.payloadFilter } : {}),
+      ...(p.limit !== undefined ? { limit: p.limit } : {}),
+      ...(p.cursor !== undefined ? { cursor: p.cursor } : {}),
+      ...(p.until !== undefined ? { until: p.until } : {}),
+      ...(p.since !== undefined ? { since: p.since } : {}),
+      ...(p.traceId !== undefined ? { traceId: p.traceId } : {}),
+      ...(p.agentId !== undefined ? { agentId: p.agentId } : {}),
+      ...(p.eventType !== undefined ? { eventType: p.eventType } : {}),
+      ...(env !== undefined ? { environment: env } : {}),
+    };
+  }
 
-    const requestPath = pathParams
-      ? Object.entries(pathParams).reduce((acc, [k, v]) => acc.replace(`{${k}}`, String(v)), path)
-      : path;
-
-    const url = appendQuery(requestPath, query);
-    const { data } = await (
-      this.api as unknown as {
-        GET: (
-          url: string,
-          opts?: Record<string, unknown>,
-        ) => Promise<{ data?: { data?: Event[]; meta?: unknown; cursor?: string } }>;
-      }
-    ).GET(url);
-
-    if (Array.isArray(data)) return { data: data as Event[] };
-    const events = (data?.data ?? []) as Event[];
-    const cursor = (data as { cursor?: string } | undefined)?.cursor;
-    return { data: events, ...(cursor ? { cursor } : {}) };
+  private buildSearchQuery(p: EventSearchParams): EventsSearchControllerSearchData["query"] {
+    const env = p.environment ?? this.client.environment;
+    return {
+      ...(p.source !== undefined ? { source: p.source } : {}),
+      ...(p.channelId !== undefined ? { channelId: p.channelId } : {}),
+      ...(p.appId !== undefined ? { appId: p.appId } : {}),
+      ...(p.payloadFilter !== undefined ? { payloadFilter: p.payloadFilter } : {}),
+      ...(p.limit !== undefined ? { limit: p.limit } : {}),
+      ...(p.cursor !== undefined ? { cursor: p.cursor } : {}),
+      ...(p.until !== undefined ? { until: p.until } : {}),
+      ...(p.since !== undefined ? { since: p.since } : {}),
+      ...(p.traceId !== undefined ? { traceId: p.traceId } : {}),
+      ...(p.agentId !== undefined ? { agentId: p.agentId } : {}),
+      ...(p.eventType !== undefined ? { eventType: p.eventType } : {}),
+      ...(env !== undefined ? { environment: env } : {}),
+    };
   }
 }
 
-export function serializeEventQuery(params: EventQueryParams): Record<string, string> {
-  const out: Record<string, string> = {};
-  if (params.channelId !== undefined) out.channelId = String(params.channelId);
-  if (params.appId !== undefined) out.appId = String(params.appId);
-  if (params.environmentId) out.environmentId = params.environmentId;
-  if (params.agentId) out.agentId = params.agentId;
-  if (params.traceId) out.traceId = params.traceId;
-  if (params.since) out.since = params.since;
-  if (params.until) out.until = params.until;
-  if (params.cursor) out.cursor = params.cursor;
-  out.limit = String(params.limit ?? DEFAULT_LIMIT);
-
-  if (params.eventType) {
-    out.eventType = Array.isArray(params.eventType) ? params.eventType.join(",") : params.eventType;
-  }
-
-  if (params.payloadFilter && Object.keys(params.payloadFilter).length > 0) {
-    out.payloadFilter = JSON.stringify(params.payloadFilter);
-  }
-  return out;
-}
-
-function appendQuery(path: string, query: Record<string, string>): string {
-  const entries = Object.entries(query);
-  if (entries.length === 0) return path;
-  const search = new URLSearchParams();
-  for (const [k, v] of entries) search.set(k, v);
-  const sep = path.includes("?") ? "&" : "?";
-  return `${path}${sep}${search.toString()}`;
-}
+export type { EventDetails };
