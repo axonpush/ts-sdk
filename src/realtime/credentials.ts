@@ -15,6 +15,8 @@ export interface IotCredentials {
   topicTemplate?: string;
   clientId?: string;
   region?: string;
+  authorizerName?: string;
+  authToken?: string;
 }
 
 /** Subset of `AxonPush` we depend on — kept loose so Stream A's class can land independently. */
@@ -57,6 +59,12 @@ export async function fetchIotCredentials(
   if (result.topicTemplate) out.topicTemplate = result.topicTemplate;
   if (result.clientId) out.clientId = result.clientId;
   if (result.region) out.region = result.region;
+  const wide = result as IotCredentialsResponseDto & {
+    authorizerName?: string;
+    authToken?: string;
+  };
+  if (wide.authorizerName) out.authorizerName = wide.authorizerName;
+  if (wide.authToken) out.authToken = wide.authToken;
   return out;
 }
 

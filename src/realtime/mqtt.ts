@@ -83,6 +83,19 @@ async function defaultMqttFactory(
   return (connect as (u: string, o: Record<string, unknown>) => MqttLikeClient)(url, options);
 }
 
+function mqttOptions(credentials: IotCredentials): Record<string, unknown> {
+  const opts: Record<string, unknown> = {
+    reconnectPeriod: 0,
+    clean: true,
+    protocolVersion: 5,
+    wsOptions: { protocol: "mqttv5.0" },
+    password: "",
+  };
+  if (credentials.clientId) opts.clientId = credentials.clientId;
+  if (credentials.authToken) opts.username = credentials.authToken;
+  return opts;
+}
+
 interface SubscriptionRecord {
   topic: string;
   filters: SubscribeFilters;
@@ -217,11 +230,7 @@ export class RealtimeClient {
     const credentials = await fetchIotCredentials(this.client);
     this.envSlug = credentials.envSlug ?? this.envSlug;
     this.orgId = this.deriveOrgIdFromCredentials(credentials);
-    const mqtt = await this.mqttFactory(credentials.presignedWssUrl, {
-      reconnectPeriod: 0,
-      clean: true,
-      protocolVersion: 4,
-    });
+    const mqtt = await this.mqttFactory(credentials.presignedWssUrl, mqttOptions(credentials));
     this.mqtt = mqtt;
 
     await new Promise<void>((resolve, reject) => {
@@ -285,11 +294,7 @@ export class RealtimeClient {
     if (this.closed) return;
     try {
       const next = await fetchIotCredentials(this.client);
-      const newClient = await this.mqttFactory(next.presignedWssUrl, {
-        reconnectPeriod: 0,
-        clean: true,
-        protocolVersion: 4,
-      });
+      const newClient = await this.mqttFactory(next.presignedWssUrl, mqttOptions(next));
       await new Promise<void>((resolve, reject) => {
         let settled = false;
         newClient.on("connect", () => {
