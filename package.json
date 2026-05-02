@@ -21,7 +21,7 @@
   },
   "files": ["dist"],
   "scripts": {
-    "codegen": "curl -fsS http://localhost:3000/swagger/json | python3 -m json.tool > spec/openapi.json && bun run tools/patch-spec.ts spec/openapi.json && rm -rf src/_internal/api && bunx @hey-api/openapi-ts -f openapi-ts.config.ts",
+    "codegen": "curl -fsS http://localhost:3000/swagger/json | python3 -m json.tool > spec/openapi.json && bun run tools/patch-spec.ts spec/openapi.json && rm -rf src/_internal/api && bunx @hey-api/openapi-ts -f openapi-ts.config.ts && sed -i \"s|from '../transport.ts'|from '../transport.js'|\" src/_internal/api/client.gen.ts",
     "build": "bun build ./src/index.ts --outdir ./dist --target node --format esm && tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit",
     "lint": "biome check src/ index.ts",

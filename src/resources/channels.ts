@@ -2,6 +2,7 @@ import {
   channelControllerCreateChannel,
   channelControllerDeleteChannel,
   channelControllerGetChannel,
+  channelControllerListChannels,
   channelControllerUpdateChannel,
 } from "../_internal/api/sdk.gen.js";
 import type { OkResponseDto } from "../_internal/api/types.gen.js";
@@ -19,6 +20,16 @@ export interface ChannelUpdateFields {
  */
 export class ChannelsResource {
   constructor(private readonly client: ResourceClient) {}
+
+  /**
+   * List channels for an app.
+   *
+   * @param appId - Parent app UUID.
+   * @returns The channels, or `null` on fail-open error.
+   */
+  async list(appId: string): Promise<Channel[] | null> {
+    return this.client.invoke(channelControllerListChannels, { query: { appId } });
+  }
 
   /**
    * Fetch a channel by UUID.

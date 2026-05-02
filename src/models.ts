@@ -37,11 +37,22 @@ import type {
 } from "./_internal/api/types.gen.js";
 
 /**
- * The set of canonical event-type discriminators accepted by
- * {@link EventsResource.publish}. Generated as an inline union literal on
- * `CreateEventDto.eventType`; aliased here for ergonomic re-use.
+ * Canonical event-type discriminators accepted by
+ * {@link EventsResource.publish}. Backend defines a fixed enum
+ * (`agent.tool_call.start`, `agent.handoff`, `app.log`, etc.) but
+ * downstream consumers also dispatch on user-defined strings; this
+ * alias widens to `string` while keeping the canonical members in
+ * editor autocomplete via the `string & {}` no-op intersection.
  */
-export type EventType = NonNullable<_CreateEventDto["eventType"]>;
+export type EventType = NonNullable<_CreateEventDto["eventType"]> | (string & {});
+
+/** Just the canonical (closed) backend enum without the string widening. */
+export type CanonicalEventType = NonNullable<_CreateEventDto["eventType"]>;
+
+/** Status enum for {@link WebhookDelivery.status}. */
+export type WebhookDeliveryStatus = NonNullable<
+  import("./_internal/api/types.gen.js").WebhookDeliveryResponseDto["status"]
+>;
 
 /**
  * One row in the paginated trace list returned by

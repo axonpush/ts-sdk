@@ -11,7 +11,6 @@ export default defineConfig({
   input: "./spec/openapi.json",
   output: {
     path: "./src/_internal/api",
-    format: "biome",
   },
   plugins: [
     "@hey-api/typescript",

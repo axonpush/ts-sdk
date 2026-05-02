@@ -1,5 +1,6 @@
 import { type GeneratedOp, invokeSync, setSettings } from "./_internal/transport";
 import { type AxonPushOptions, type ResolvedSettings, resolveSettings } from "./config";
+import type { RealtimeClient, RealtimeOptions } from "./realtime";
 import { ApiKeysResource } from "./resources/api-keys";
 import { AppsResource } from "./resources/apps";
 import { ChannelsResource } from "./resources/channels";
@@ -68,11 +69,9 @@ export class AxonPush {
    * @param opts Realtime client options (forwarded as the second arg).
    * @returns A `RealtimeClient` instance ready to subscribe / publish.
    */
-  async connectRealtime(opts?: unknown): Promise<unknown> {
-    const mod = (await import("./realtime")) as {
-      RealtimeClient: new (parent: AxonPush, options?: unknown) => unknown;
-    };
-    return new mod.RealtimeClient(this, opts);
+  async connectRealtime(opts?: RealtimeOptions): Promise<RealtimeClient> {
+    const { RealtimeClient: Ctor } = await import("./realtime");
+    return new Ctor(this, opts);
   }
 
   /**

@@ -1067,6 +1067,69 @@
         ]
       }
     },
+    "/channel": {
+      "get": {
+        "operationId": "ChannelController_listChannels",
+        "parameters": [
+          {
+            "name": "appId",
+            "required": true,
+            "in": "query",
+            "description": "App UUID to scope the listing.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ChannelResponseDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "channels"
+        ]
+      },
+      "post": {
+        "operationId": "ChannelController_createChannel",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/createChannelDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChannelResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "channels"
+        ]
+      }
+    },
     "/channel/{id}": {
       "get": {
         "operationId": "ChannelController_getChannel",
@@ -1143,37 +1206,6 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/OkResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "tags": [
-          "channels"
-        ]
-      }
-    },
-    "/channel": {
-      "post": {
-        "operationId": "ChannelController_createChannel",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/createChannelDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ChannelResponseDto"
                 }
               }
             }
@@ -3948,6 +3980,10 @@
       "EventIngestResponseDto": {
         "type": "object",
         "properties": {
+          "id": {
+            "type": "string",
+            "description": "Alias of eventId, populated by the global IdAliasInterceptor."
+          },
           "eventId": {
             "type": "string"
           },
@@ -3972,6 +4008,7 @@
           }
         },
         "required": [
+          "id",
           "eventId",
           "identifier",
           "dedupKey",

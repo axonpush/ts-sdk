@@ -93,7 +93,7 @@ export class EventsResource {
       channel_id: params.channelId,
       traceId: trace.traceId,
       spanId: params.spanId ?? trace.nextSpanId(),
-      eventType: params.eventType ?? "custom",
+      eventType: (params.eventType ?? "custom") as CreateEventDto["eventType"],
       sync: params.sync ?? false,
       ...(params.agentId !== undefined ? { agentId: params.agentId } : {}),
       ...(params.parentEventId !== undefined ? { parentEventId: params.parentEventId } : {}),

@@ -79,6 +79,7 @@ export {
 export type {
   ApiKey,
   App,
+  CanonicalEventType,
   Channel,
   CreateEventDto,
   Environment,
@@ -91,6 +92,7 @@ export type {
   TraceSummary,
   User,
   WebhookDelivery,
+  WebhookDeliveryStatus,
   WebhookEndpoint,
   WebhookEndpointCreateResponseDto,
 } from "./models";

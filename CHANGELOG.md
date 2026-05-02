@@ -41,6 +41,21 @@ shutdown-safety alongside the rewrite.
 
 ### Added
 
+- **`ChannelsResource.list(appId)`** — returns the channels under an app.
+  Backed by a new `GET /channel?appId=` route on the backend.
+- **`EventType` widens to accept arbitrary strings while keeping
+  autocomplete** for the canonical members. Defined as
+  `CanonicalEventType | (string & {})`. The closed enum is exported as
+  `CanonicalEventType` for callers who want to enforce it.
+- **`WebhookDeliveryStatus`** exported from the public surface so
+  callers can pattern-match on `delivery.status` directly.
+- **`AxonPush.connectRealtime` is now strongly typed** as
+  `(opts?: RealtimeOptions) => Promise<RealtimeClient>` — no more
+  `Promise<unknown>` cast at every call site.
+- **`Event.id` is populated alongside `Event.eventId`.** The backend's
+  `IdAliasInterceptor` aliases the primary key to `id` on every
+  response; `EventIngestResponseDto` now declares both, so callers can
+  rely on either field without a cast.
 - **Settings-style env-var resolution.** `AXONPUSH_API_KEY`,
   `AXONPUSH_TENANT_ID`, `AXONPUSH_ORG_ID`, `AXONPUSH_APP_ID`,
   `AXONPUSH_BASE_URL`, `AXONPUSH_ENVIRONMENT`, `AXONPUSH_IOT_ENDPOINT`,
