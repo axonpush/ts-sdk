@@ -1,5 +1,25 @@
 # Changelog
 
+## [0.0.6] – 2026-05-02
+
+`RealtimeClient` now connects through the backend's IoT custom JWT
+authorizer. Pre-0.0.6 the client expected a SigV4-signed presigned
+URL and mqtt.js's default `mqtt` WS subprotocol; the backend has
+moved to an unsigned custom-authorizer flow that needs the JWT in
+the MQTT CONNECT username and `mqttv5.0` as the WS subprotocol —
+without the SDK update every connect attempt is rejected with
+`AUTHORIZATION_FAILURE`.
+
+### Added
+- `IotCredentials.authorizerName` and `IotCredentials.authToken`
+  re-exported from `/auth/iot-credentials`.
+
+### Fixed
+- MQTT CONNECT now passes `username = credentials.authToken` (the
+  bearer JWT) and `wsOptions.protocol = "mqttv5.0"`. Subscribes
+  start succeeding against AWS IoT Core's unsigned custom authorizer.
+- `protocolVersion` bumped to `5` to match the WS subprotocol.
+
 ## [0.0.5] – 2026-05-02
 
 The 0.0.5 release rebuilds the transport layer on top of an
