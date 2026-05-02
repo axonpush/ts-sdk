@@ -1,16 +1,19 @@
+import type { EventResponseDto } from "../_internal/api/types.gen.js";
 import { logger } from "../logger.js";
-import type { components } from "../schema";
 import {
-  type FetchCredentialsOptions,
+  type AxonPushLike,
   fetchIotCredentials,
   type IotCredentials,
   msUntilRefresh,
 } from "./credentials.js";
 import { buildPublishTopic, buildSubscribeTopic, type TopicParts } from "./topics.js";
 
-type Event = components["schemas"]["EventResponseDto"];
+/** Public event shape relayed to user callbacks. */
+export type AxonEvent = EventResponseDto;
 
 export interface SubscribeFilters {
+  appId?: string;
+  channelId?: string;
   agentId?: string;
   eventType?: string;
   traceId?: string;
@@ -18,7 +21,8 @@ export interface SubscribeFilters {
 }
 
 export interface PublishData {
-  channelId: string | number;
+  channelId: string;
+  appId?: string;
   identifier: string;
   payload: Record<string, unknown>;
   agentId?: string;
@@ -27,15 +31,15 @@ export interface PublishData {
   environment?: string;
 }
 
-export interface RealtimeClientOptions {
-  baseUrl: string;
-  headers: Record<string, string>;
-  orgId: string;
-  appId: string;
-  defaultEnvironment?: string;
-  fetchImpl?: typeof fetch;
+export interface RealtimeOptions {
+  /** Default environment slug to use on publish when not specified per-message. */
+  environment?: string;
+  /** Refresh credentials this many ms before they expire. Default 60_000. */
+  credentialsRefreshLeadMs?: number;
+  /** Called when refresh / reconnect ultimately fails — caller drives recovery. */
+  onError?: (err: Error) => void;
+  /** Test hook: supply a fake mqtt client factory. */
   mqttFactory?: MqttFactory;
-  refreshLeadSeconds?: number;
 }
 
 export type MqttFactory = (
@@ -54,17 +58,21 @@ export interface MqttLikeClient {
   end(force?: boolean): void;
 }
 
-type EventHandler = (event: Event) => void;
+type EventHandler = (event: AxonEvent) => void | Promise<void>;
 
 const DEFAULT_QOS = 1 as const;
+const REFRESH_BACKOFF_MS = [5_000, 15_000, 30_000, 60_000] as const;
 
 async function defaultMqttFactory(
   url: string,
   options: Record<string, unknown>,
 ): Promise<MqttLikeClient> {
-  let mqttModule: any;
+  let mqttModule: { connect?: unknown; default?: { connect?: unknown } };
   try {
-    mqttModule = await import("mqtt");
+    mqttModule = (await import("mqtt")) as {
+      connect?: unknown;
+      default?: { connect?: unknown };
+    };
   } catch {
     throw new Error("MQTT support requires the `mqtt` package. Install it with: bun add mqtt");
   }
@@ -72,98 +80,132 @@ async function defaultMqttFactory(
   if (typeof connect !== "function") {
     throw new Error("Loaded `mqtt` module is missing a connect() export");
   }
-  return connect(url, options) as MqttLikeClient;
+  return (connect as (u: string, o: Record<string, unknown>) => MqttLikeClient)(url, options);
 }
 
 interface SubscriptionRecord {
   topic: string;
-  parts: TopicParts;
-  filters: { traceId?: string };
+  filters: SubscribeFilters;
+  callbacks: Set<(event: AxonEvent) => void | Promise<void>>;
 }
 
+/**
+ * Long-lived MQTT-over-WSS client for AxonPush realtime.
+ *
+ * Connects with credentials fetched via the generated
+ * `iotCredentialsControllerGetCredentials` op, schedules pre-emptive
+ * refreshes, and routes broker messages through user callbacks with
+ * per-callback error isolation.
+ */
 export class RealtimeClient {
-  private client: MqttLikeClient | null = null;
-  private refreshTimer: ReturnType<typeof setTimeout> | null = null;
-  private readonly subscriptions = new Map<string, SubscriptionRecord>();
-  private readonly eventHandlers: EventHandler[] = [];
-  private readonly disconnectHandlers: Array<() => void> = [];
+  private readonly client: AxonPushLike;
+  private readonly opts: RealtimeOptions;
   private readonly mqttFactory: MqttFactory;
-  private readonly refreshLeadSeconds: number;
-  private connecting: Promise<void> | null = null;
+  private readonly refreshLeadMs: number;
+  private mqtt: MqttLikeClient | null = null;
+  private refreshTimer: ReturnType<typeof setTimeout> | null = null;
+  private refreshAttempt = 0;
+  private readonly subscriptions = new Map<string, SubscriptionRecord>();
+  private readonly eventHandlers = new Set<EventHandler>();
+  private readonly disconnectHandlers: Array<() => void> = [];
+  private connectingPromise: Promise<void> | null = null;
+  private orgId: string | null = null;
+  private envSlug: string | undefined;
   private closed = false;
 
-  constructor(private readonly opts: RealtimeClientOptions) {
+  constructor(client: AxonPushLike, opts: RealtimeOptions = {}) {
+    this.client = client;
+    this.opts = opts;
     this.mqttFactory = opts.mqttFactory ?? defaultMqttFactory;
-    this.refreshLeadSeconds = opts.refreshLeadSeconds ?? 60;
+    this.refreshLeadMs = opts.credentialsRefreshLeadMs ?? 60_000;
   }
 
+  /** Open the broker connection. Idempotent — concurrent calls share the in-flight attempt. */
   async connect(): Promise<void> {
-    if (this.connecting) return this.connecting;
-    this.connecting = this.bringUp();
+    if (this.closed) throw new Error("RealtimeClient is closed");
+    if (this.mqtt) return;
+    if (this.connectingPromise) return this.connectingPromise;
+    this.connectingPromise = this.bringUp();
     try {
-      await this.connecting;
+      await this.connectingPromise;
     } finally {
-      this.connecting = null;
+      this.connectingPromise = null;
     }
   }
 
-  subscribe(channelId: string | number, filters?: SubscribeFilters): void {
+  /**
+   * Subscribe to a topic and run `callback` for every matching event.
+   * Multiple callbacks on the same filter coexist — one failure does not
+   * affect the others.
+   */
+  async subscribe(filters: SubscribeFilters, callback: EventHandler): Promise<void> {
     this.requireOpen();
-    const parts: TopicParts = {
-      orgId: this.opts.orgId,
-      appId: this.opts.appId,
-      channelId,
-      envSlug: filters?.environment,
-      eventType: filters?.eventType,
-      agentId: filters?.agentId,
+    if (!this.mqtt || !this.orgId) await this.connect();
+    if (!this.mqtt || !this.orgId) throw new Error("RealtimeClient: not connected");
+    const topic = buildSubscribeTopic(this.toTopicParts(filters));
+    const existing = this.subscriptions.get(topic);
+    if (existing) {
+      existing.callbacks.add(callback);
+      return;
+    }
+    const record: SubscriptionRecord = {
+      topic,
+      filters,
+      callbacks: new Set([callback]),
     };
-    const topic = buildSubscribeTopic(parts);
-    if (this.subscriptions.has(topic)) return;
-    this.subscriptions.set(topic, { topic, parts, filters: { traceId: filters?.traceId } });
-    this.client?.subscribe(topic, { qos: DEFAULT_QOS });
+    this.subscriptions.set(topic, record);
+    this.mqtt.subscribe(topic, { qos: DEFAULT_QOS });
   }
 
-  unsubscribe(channelId: string | number, filters?: SubscribeFilters): void {
-    const topic = buildSubscribeTopic({
-      orgId: this.opts.orgId,
-      appId: this.opts.appId,
-      channelId,
-      envSlug: filters?.environment,
-      eventType: filters?.eventType,
-      agentId: filters?.agentId,
-    });
+  /** Drop the subscription with the given filters. No-op if it isn't registered. */
+  async unsubscribe(filters: SubscribeFilters): Promise<void> {
+    if (!this.orgId) return;
+    const topic = buildSubscribeTopic(this.toTopicParts(filters));
     if (!this.subscriptions.delete(topic)) return;
-    this.client?.unsubscribe(topic);
+    this.mqtt?.unsubscribe(topic);
   }
 
-  publish(data: PublishData): void {
+  /** Publish a single event onto the broker. Requires `connect()` to have completed. */
+  async publish(data: PublishData): Promise<void> {
     this.requireOpen();
-    const envSlug = data.environment ?? this.opts.defaultEnvironment ?? "dev";
-    const topic = buildPublishTopic({
-      orgId: this.opts.orgId,
-      appId: this.opts.appId,
+    if (!this.mqtt || !this.orgId) await this.connect();
+    if (!this.mqtt || !this.orgId) throw new Error("RealtimeClient: not connected");
+    const parts: TopicParts = {
+      orgId: this.orgId,
+      envSlug: data.environment ?? this.opts.environment ?? this.envSlug ?? "default",
+      appId: data.appId ?? "default",
       channelId: data.channelId,
-      envSlug,
-      eventType: data.eventType ?? "custom",
-      agentId: data.agentId ?? "_",
-    });
-    this.client?.publish(topic, JSON.stringify(data), { qos: DEFAULT_QOS });
+      ...(data.eventType !== undefined ? { eventType: data.eventType } : {}),
+      ...(data.agentId !== undefined ? { agentId: data.agentId } : {}),
+    };
+    const topic = buildPublishTopic(parts);
+    this.mqtt.publish(topic, JSON.stringify(data), { qos: DEFAULT_QOS });
   }
 
-  onEvent(handler: EventHandler): void {
-    this.eventHandlers.push(handler);
+  /** Register a handler that receives every incoming event. Returns an unsubscribe fn. */
+  onEvent(handler: EventHandler): () => void {
+    this.eventHandlers.add(handler);
+    return () => {
+      this.eventHandlers.delete(handler);
+    };
   }
 
+  /** Tear the connection down. Idempotent. */
   async disconnect(): Promise<void> {
+    if (this.closed && !this.mqtt) return;
     this.closed = true;
     if (this.refreshTimer) {
       clearTimeout(this.refreshTimer);
       this.refreshTimer = null;
     }
-    this.client?.end(true);
-    this.client = null;
+    const mqtt = this.mqtt;
+    this.mqtt = null;
+    mqtt?.end(true);
+    for (const cb of this.disconnectHandlers) cb();
+    this.disconnectHandlers.length = 0;
   }
 
+  /** Resolves once `disconnect()` (or remote close) finishes. */
   async wait(): Promise<void> {
     if (this.closed) return;
     return new Promise((resolve) => {
@@ -172,44 +214,68 @@ export class RealtimeClient {
   }
 
   private async bringUp(): Promise<void> {
-    if (this.closed) throw new Error("RealtimeClient is closed");
-    const credentials = await this.fetchCredentials();
-    const client = await this.mqttFactory(credentials.presignedWssUrl, {
+    const credentials = await fetchIotCredentials(this.client);
+    this.envSlug = credentials.envSlug ?? this.envSlug;
+    this.orgId = this.deriveOrgIdFromCredentials(credentials);
+    const mqtt = await this.mqttFactory(credentials.presignedWssUrl, {
       reconnectPeriod: 0,
       clean: true,
       protocolVersion: 4,
     });
-    this.client = client;
-    this.scheduleRefresh(credentials.expiresAt);
+    this.mqtt = mqtt;
 
     await new Promise<void>((resolve, reject) => {
-      const onConnect = () => resolve();
-      const onError = (err: Error) => reject(err);
-      client.on("connect", onConnect);
-      client.on("error", onError);
+      let settled = false;
+      mqtt.on("connect", () => {
+        if (settled) return;
+        settled = true;
+        resolve();
+      });
+      mqtt.on("error", (err) => {
+        if (settled) return;
+        settled = true;
+        reject(err);
+      });
     });
 
-    client.on("message", (topic, payload) => this.handleMessage(topic, payload));
-    client.on("close", () => this.handleClose());
+    mqtt.on("message", (topic, payload) => this.handleMessage(topic, payload));
+    mqtt.on("close", () => this.handleClose());
+    mqtt.on("error", (err) => this.handleError(err));
+
+    this.refreshAttempt = 0;
+    this.scheduleRefresh(credentials.expiresAt);
 
     for (const sub of this.subscriptions.values()) {
-      client.subscribe(sub.topic, { qos: DEFAULT_QOS });
+      mqtt.subscribe(sub.topic, { qos: DEFAULT_QOS });
     }
   }
 
-  private fetchCredentials(): Promise<IotCredentials> {
-    const fetchOpts: FetchCredentialsOptions = {
-      baseUrl: this.opts.baseUrl,
-      headers: this.opts.headers,
-      ...(this.opts.fetchImpl ? { fetchImpl: this.opts.fetchImpl } : {}),
-    };
-    return fetchIotCredentials(fetchOpts);
+  private deriveOrgIdFromCredentials(credentials: IotCredentials): string {
+    if (credentials.topicPrefix) {
+      const parts = credentials.topicPrefix.split("/");
+      const last = parts[parts.length - 1];
+      if (last) return last;
+    }
+    if (credentials.clientId) return credentials.clientId;
+    return "default";
+  }
+
+  private toTopicParts(filters: SubscribeFilters): Partial<TopicParts> & { orgId: string } {
+    if (!this.orgId) throw new Error("RealtimeClient: orgId unknown — call connect() first");
+    const parts: Partial<TopicParts> & { orgId: string } = { orgId: this.orgId };
+    const env = filters.environment ?? this.opts.environment ?? this.envSlug;
+    if (env !== undefined) parts.envSlug = env;
+    if (filters.appId !== undefined) parts.appId = filters.appId;
+    if (filters.channelId !== undefined) parts.channelId = filters.channelId;
+    if (filters.eventType !== undefined) parts.eventType = filters.eventType;
+    if (filters.agentId !== undefined) parts.agentId = filters.agentId;
+    return parts;
   }
 
   private scheduleRefresh(expiresAt: string): void {
     if (this.refreshTimer) clearTimeout(this.refreshTimer);
-    const delay = msUntilRefresh(expiresAt, this.refreshLeadSeconds);
-    if (delay <= 0) return;
+    if (this.closed) return;
+    const delay = msUntilRefresh(expiresAt, this.refreshLeadMs);
     this.refreshTimer = setTimeout(() => {
       void this.refreshConnection();
     }, delay);
@@ -218,44 +284,93 @@ export class RealtimeClient {
   private async refreshConnection(): Promise<void> {
     if (this.closed) return;
     try {
-      const next = await this.fetchCredentials();
-      const previous = this.client;
+      const next = await fetchIotCredentials(this.client);
       const newClient = await this.mqttFactory(next.presignedWssUrl, {
         reconnectPeriod: 0,
         clean: true,
         protocolVersion: 4,
       });
-      this.client = newClient;
       await new Promise<void>((resolve, reject) => {
-        newClient.on("connect", () => resolve());
-        newClient.on("error", (err) => reject(err));
+        let settled = false;
+        newClient.on("connect", () => {
+          if (settled) return;
+          settled = true;
+          resolve();
+        });
+        newClient.on("error", (err) => {
+          if (settled) return;
+          settled = true;
+          reject(err);
+        });
       });
+      const previous = this.mqtt;
+      this.mqtt = newClient;
       newClient.on("message", (topic, payload) => this.handleMessage(topic, payload));
       newClient.on("close", () => this.handleClose());
+      newClient.on("error", (err) => this.handleError(err));
+      previous?.end(true);
+      this.envSlug = next.envSlug ?? this.envSlug;
       for (const sub of this.subscriptions.values()) {
         newClient.subscribe(sub.topic, { qos: DEFAULT_QOS });
       }
-      previous?.end(true);
+      this.refreshAttempt = 0;
       this.scheduleRefresh(next.expiresAt);
     } catch (err) {
-      logger.warn(`MQTT credential refresh failed: ${(err as Error).message}`);
-      this.scheduleRefresh(new Date(Date.now() + 30_000).toISOString());
+      const error = err as Error;
+      logger.warn(`MQTT credential refresh failed: ${error.message}`);
+      const idx = Math.min(this.refreshAttempt, REFRESH_BACKOFF_MS.length - 1);
+      const delay = REFRESH_BACKOFF_MS[idx] ?? REFRESH_BACKOFF_MS[REFRESH_BACKOFF_MS.length - 1];
+      this.refreshAttempt += 1;
+      if (this.refreshAttempt > REFRESH_BACKOFF_MS.length * 2) {
+        this.opts.onError?.(error);
+        return;
+      }
+      if (this.refreshTimer) clearTimeout(this.refreshTimer);
+      this.refreshTimer = setTimeout(() => {
+        void this.refreshConnection();
+      }, delay);
     }
   }
 
-  private handleMessage(_topic: string, payload: Uint8Array | Buffer): void {
-    let parsed: Event;
+  private handleMessage(_topic: string, payload: Uint8Array | Buffer | string): void {
+    let parsed: AxonEvent;
     try {
       const text = typeof payload === "string" ? payload : new TextDecoder().decode(payload);
-      parsed = JSON.parse(text) as Event;
-    } catch {
+      parsed = JSON.parse(text) as AxonEvent;
+    } catch (err) {
+      logger.warn(`MQTT message parse failed: ${(err as Error).message}`);
       return;
     }
     for (const handler of this.eventHandlers) {
-      try {
-        handler(parsed);
-      } catch {}
+      this.dispatch(handler, parsed);
     }
+    for (const sub of this.subscriptions.values()) {
+      if (!this.matchesFilters(parsed, sub.filters)) continue;
+      for (const cb of sub.callbacks) this.dispatch(cb, parsed);
+    }
+  }
+
+  private dispatch(handler: EventHandler, event: AxonEvent): void {
+    try {
+      const result = handler(event);
+      if (result && typeof (result as Promise<void>).then === "function") {
+        (result as Promise<void>).catch((err) => this.reportCallbackError(err));
+      }
+    } catch (err) {
+      this.reportCallbackError(err);
+    }
+  }
+
+  private reportCallbackError(err: unknown): void {
+    const error = err instanceof Error ? err : new Error(String(err));
+    logger.warn(`Realtime user callback threw: ${error.message}`);
+    this.opts.onError?.(error);
+  }
+
+  private matchesFilters(event: AxonEvent, filters: SubscribeFilters): boolean {
+    if (filters.traceId && (event as { traceId?: string }).traceId !== filters.traceId)
+      return false;
+    return true;
   }
 
   private handleClose(): void {
@@ -265,9 +380,12 @@ export class RealtimeClient {
     }
   }
 
+  private handleError(err: Error): void {
+    logger.warn(`MQTT client error: ${err.message}`);
+    this.opts.onError?.(err);
+  }
+
   private requireOpen(): void {
     if (this.closed) throw new Error("RealtimeClient is closed");
   }
 }
-
-export class WebSocketClient extends RealtimeClient {}
