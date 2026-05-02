@@ -1,137 +1,139 @@
-import { withEnvironment } from "./environment.js";
-import { logger } from "./logger.js";
-import { RealtimeClient } from "./realtime/mqtt.js";
-import { ApiKeysResource } from "./resources/api-keys.js";
-import { AppsResource } from "./resources/apps.js";
-import { ChannelsResource } from "./resources/channels.js";
-import { EnvironmentsResource } from "./resources/environments.js";
-import { EventsResource } from "./resources/events.js";
-import { TracesResource } from "./resources/traces.js";
-import { WebhooksResource } from "./resources/webhooks.js";
-import { createTransport, type TransportClient } from "./transport.js";
+import { type GeneratedOp, invokeSync, setSettings } from "./_internal/transport";
+import { type AxonPushOptions, type ResolvedSettings, resolveSettings } from "./config";
+import { getOrCreateTrace, type TraceContext } from "./tracing";
 
-const DEFAULT_BASE_URL = "https://api.axonpush.xyz";
-
-const ENV_VAR_PRECEDENCE = [
-  "AXONPUSH_ENVIRONMENT",
-  "SENTRY_ENVIRONMENT",
-  "NODE_ENV",
-  "APP_ENV",
-  "ENV",
-] as const;
-
-function detectEnvironment(): string | undefined {
-  const env = typeof process !== "undefined" && process.env ? process.env : undefined;
-  if (!env) return undefined;
-  for (const name of ENV_VAR_PRECEDENCE) {
-    const v = env[name];
-    if (v && v.length > 0) return v;
-  }
-  return undefined;
-}
-
-export interface AxonPushOptions {
-  apiKey: string;
-  tenantId: string;
-  baseUrl?: string;
-  wsUrl?: string;
-  iotEndpoint?: string;
-  failOpen?: boolean;
-  environment?: string;
-  orgId?: string;
-  appId?: string;
-}
-
+/**
+ * High-level facade over the AxonPush REST + realtime APIs.
+ *
+ * Resource accessors (`events`, `channels`, ...) are loaded lazily on first
+ * access via dynamic `import()` so that tree-shakers can drop unused
+ * resources, and so that resource modules compile independently of the core
+ * client during the v0.0.5 rewrite.
+ */
 export class AxonPush {
-  readonly events: EventsResource;
-  readonly channels: ChannelsResource;
-  readonly apps: AppsResource;
-  readonly environments: EnvironmentsResource;
-  readonly traces: TracesResource;
-  readonly webhooks: WebhooksResource;
-  readonly apiKeys: ApiKeysResource;
+  /** Fully-resolved configuration, materialised in the constructor. */
+  readonly settings: ResolvedSettings;
 
-  private readonly api: TransportClient;
-  private readonly baseUrl: string;
-  private readonly apiKey: string;
-  private readonly tenantId: string;
-  private readonly failOpen: boolean;
-  private readonly wsUrl: string | undefined;
-  private readonly iotEndpoint: string | undefined;
-  private readonly orgId: string;
-  private readonly appId: string;
-  readonly environment: string | undefined;
+  private readonly _resources: Record<string, unknown> = {};
 
-  constructor(opts: AxonPushOptions) {
-    this.baseUrl = opts.baseUrl ?? DEFAULT_BASE_URL;
-    this.apiKey = opts.apiKey;
-    this.tenantId = opts.tenantId;
-    this.failOpen = opts.failOpen ?? true;
-    this.environment = opts.environment ?? detectEnvironment();
-    this.wsUrl = opts.wsUrl;
-    this.iotEndpoint = opts.iotEndpoint;
-    this.orgId = opts.orgId ?? opts.tenantId;
-    this.appId = opts.appId ?? "default";
+  /**
+   * @param options Optional caller overrides; falsy fields fall through to
+   *   `AXONPUSH_*` env vars and then documented defaults.
+   */
+  constructor(options?: AxonPushOptions) {
+    this.settings = resolveSettings(options);
+    setSettings(this.settings);
+  }
 
-    if (this.environment) {
-      const source = opts.environment ? "parameter" : "env var";
-      logger.debug(`AxonPush environment=${this.environment} (resolved from ${source})`);
-    }
+  /** The configured environment label (or `undefined` if none). */
+  get environment(): string | undefined {
+    return this.settings.environment;
+  }
 
-    this.api = createTransport({
-      apiKey: opts.apiKey,
-      tenantId: opts.tenantId,
-      baseUrl: this.baseUrl,
-      failOpen: this.failOpen,
-      environment: this.environment,
-      ...(this.wsUrl ? { wsUrl: this.wsUrl } : {}),
-      ...(this.iotEndpoint ? { iotEndpoint: this.iotEndpoint } : {}),
-    });
+  /**
+   * Lazily import a resource module and instantiate its class with `this`.
+   * Resources are cached per-instance after first construction.
+   */
+  private async _resource(name: string, modulePath: string, exportName: string): Promise<unknown> {
+    const cached = this._resources[name];
+    if (cached) return cached;
+    const mod = (await import(modulePath)) as Record<string, unknown>;
+    const Ctor = mod[exportName] as new (parent: AxonPush) => unknown;
+    const instance = new Ctor(this);
+    this._resources[name] = instance;
+    return instance;
+  }
 
-    const headers: Record<string, string> = {
-      "X-API-Key": opts.apiKey,
-      "x-tenant-id": opts.tenantId,
+  /** Events resource — `publish`, `list`, `search`. */
+  get events(): Promise<unknown> {
+    return this._resource("events", "./resources/events", "EventsResource");
+  }
+
+  /** Channels resource. */
+  get channels(): Promise<unknown> {
+    return this._resource("channels", "./resources/channels", "ChannelsResource");
+  }
+
+  /** Apps resource. */
+  get apps(): Promise<unknown> {
+    return this._resource("apps", "./resources/apps", "AppsResource");
+  }
+
+  /** Environments resource. */
+  get environments(): Promise<unknown> {
+    return this._resource("environments", "./resources/environments", "EnvironmentsResource");
+  }
+
+  /** Webhooks resource. */
+  get webhooks(): Promise<unknown> {
+    return this._resource("webhooks", "./resources/webhooks", "WebhooksResource");
+  }
+
+  /** Traces resource. */
+  get traces(): Promise<unknown> {
+    return this._resource("traces", "./resources/traces", "TracesResource");
+  }
+
+  /** API keys resource. */
+  get apiKeys(): Promise<unknown> {
+    return this._resource("apiKeys", "./resources/api-keys", "ApiKeysResource");
+  }
+
+  /** Organizations resource. */
+  get organizations(): Promise<unknown> {
+    return this._resource("organizations", "./resources/organizations", "OrganizationsResource");
+  }
+
+  /**
+   * Open a realtime (MQTT-over-WSS) connection. The realtime module is
+   * imported lazily so callers that never use realtime do not pay for the
+   * `mqtt` peer dependency.
+   *
+   * @param opts Realtime client options (forwarded as the second arg).
+   * @returns A `RealtimeClient` instance ready to subscribe / publish.
+   */
+  async connectRealtime(opts?: unknown): Promise<unknown> {
+    const mod = (await import("./realtime")) as {
+      RealtimeClient: new (parent: AxonPush, options?: unknown) => unknown;
     };
-    if (this.environment) {
-      headers["X-Axonpush-Environment"] = this.environment;
-    }
-
-    this.events = new EventsResource(this.api, this.failOpen, this.environment);
-    this.channels = new ChannelsResource(this.api, this.failOpen, {
-      baseUrl: this.baseUrl,
-      headers,
-      orgId: this.orgId,
-      appId: this.appId,
-    });
-    this.apps = new AppsResource(this.api, this.failOpen);
-    this.environments = new EnvironmentsResource(this.api, this.failOpen);
-    this.traces = new TracesResource(this.api, this.failOpen);
-    this.webhooks = new WebhooksResource(this.api, this.failOpen);
-    this.apiKeys = new ApiKeysResource(this.api, this.failOpen);
+    return new mod.RealtimeClient(this, opts);
   }
 
-  connectWebSocket(): RealtimeClient {
-    return this.connectRealtime();
-  }
-
-  connectRealtime(): RealtimeClient {
-    const headers: Record<string, string> = {
-      "X-API-Key": this.apiKey,
-      "x-tenant-id": this.tenantId,
-    };
-    if (this.environment) headers["X-Axonpush-Environment"] = this.environment;
-    return new RealtimeClient({
-      baseUrl: this.baseUrl,
-      headers,
-      orgId: this.orgId,
-      appId: this.appId,
-      ...(this.environment ? { defaultEnvironment: this.environment } : {}),
+  /**
+   * Run a generated SDK operation through the transport chokepoint.
+   *
+   * @typeParam T Success-response type returned by `op`.
+   * @param op A function from `src/_internal/api/sdk.gen.ts`.
+   * @param args Options bag forwarded to `op`.
+   * @returns The unwrapped response data, or `null` if `failOpen` swallowed
+   *   an `APIConnectionError`.
+   * @throws {AxonPushError} On non-retryable failures.
+   */
+  invoke<T>(op: GeneratedOp<T>, args?: unknown): Promise<T | null> {
+    return invokeSync<T>(op, args, {
+      failOpen: this.settings.failOpen,
+      maxRetries: this.settings.maxRetries,
     });
   }
 
-  withEnvironment<T>(environment: string, fn: () => T): T {
-    return withEnvironment(environment, fn);
+  /**
+   * Return the active {@link TraceContext} or create a fresh one.
+   *
+   * @param seedTraceId Optional pre-existing trace id to adopt.
+   * @returns The trace context for the current async flow.
+   */
+  getOrCreateTrace(seedTraceId?: string): TraceContext {
+    return getOrCreateTrace(seedTraceId);
   }
 
-  [Symbol.dispose](): void {}
+  /**
+   * Idempotent teardown hook. Currently a no-op; reserved for releasing
+   * realtime connections, flushing publishers, etc. once those are owned by
+   * the facade.
+   */
+  close(): void {
+    /* noop */
+  }
 }
+
+export type { AxonPushOptions } from "./config";
