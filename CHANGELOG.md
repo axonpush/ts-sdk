@@ -1,5 +1,52 @@
 # Changelog
 
+## [0.0.7] – 2026-05-05
+
+Quality-of-life fix for traces emitted from LangGraph and modern
+Chat\* LLM wrappers. The SDK was discarding the most useful identity
+information LangChain.js provides on its callbacks, leaving every
+event labeled `chain_type: "unknown"` / `model: "ChatOpenAI"` in the
+dashboard.
+
+### Fixed
+- **`chain_type: "unknown"` for every LangGraph step**: LangGraph
+  compiles graph nodes down to anonymous Runnables, which means
+  `handleChainStart(serialized, ...)` receives `serialized={}` and
+  pushes the node identity into the trailing `runName` arg +
+  `metadata.langgraph_node`. The handler was reading only
+  `serialized.name` and falling back to the literal string
+  `"unknown"`, so traces were impossible to read for any graph-style
+  agent. The handler now derives a name from `runName` →
+  `metadata.langgraph_node` → `serialized.name` → last segment of
+  `serialized.id` → the truthful fallback `"Runnable"`.
+- **`model: "ChatOpenAI"` instead of the actual model id**: every
+  LLM callback was emitting the LangChain wrapper class name
+  (`ChatOpenAI`, `ChatAnthropic`, …) instead of the configured
+  model. The handler now prefers
+  `extraParams.invocation_params.{model,model_name,model_id}` (set
+  by every modern Chat\* integration at call-time) and falls back
+  through `extraParams.{model,…}` and `serialized.kwargs.{model,…}`
+  before landing on the class-name fallback.
+
+### Added
+- **Per-event metadata enrichment**: every `handleChainStart` and
+  `handleLLMStart` now propagates `langgraph_node`, `langgraph_step`,
+  `langgraph_triggers`, `thread_id`, `run_type`, and `tags` from
+  LangChain's trailing positional callback args into the event
+  `metadata` block, so the AxonPush UI can group/filter by graph
+  node and tag without needing the user to wire a custom `metadata`
+  at handler construction.
+- New helpers `deriveRunnableName`, `deriveModelName`, and
+  `extractRunMetadata` exported from `axonpush/integrations/_base`
+  (used by both `langchain.ts` and `langgraph.ts`).
+
+### Migration
+No code changes required. `handleChainStart` and `handleLLMStart`
+now accept the trailing positional args LangChain.js already passes
+(`tags`, `metadata`, `runType`, `runName` for chain start;
+`extraParams`, `tags`, `metadata`, `runName` for LLM start) — old
+callers that ignored those args keep working.
+
 ## [0.0.6] – 2026-05-02
 
 `RealtimeClient` now connects through the backend's IoT custom JWT

@@ -76,6 +76,98 @@ export function truncate(value: unknown, maxLen = 2000): unknown {
   }
 }
 
+/**
+ * Derive a human-readable Runnable name from LangChain's
+ * `handleChainStart(serialized, inputs, runId, parentRunId, tags, metadata, runType, runName)`
+ * positional callback. LangGraph nodes pass `serialized={}` and surface the
+ * node identity via the trailing `runName` arg + `metadata.langgraph_node`,
+ * so reading only `serialized.name` left every graph step labelled
+ * `chain_type: "unknown"`.
+ *
+ * Resolution order: explicit `runName` -> `metadata.langgraph_node` ->
+ * `serialized.name` -> last segment of `serialized.id` -> `"Runnable"`.
+ */
+export function deriveRunnableName(
+  serialized: Record<string, any> | undefined | null,
+  runName?: string,
+  metadata?: Record<string, unknown>,
+): string {
+  if (runName && typeof runName === "string") return runName;
+  const node = (metadata as { langgraph_node?: unknown } | undefined)?.langgraph_node;
+  if (typeof node === "string" && node) return node;
+  const s = serialized || {};
+  if (typeof s.name === "string" && s.name) return s.name;
+  if (Array.isArray(s.id) && s.id.length > 0) {
+    return String(s.id[s.id.length - 1]);
+  }
+  return "Runnable";
+}
+
+/**
+ * Derive the actual configured LLM model id, not the wrapper class
+ * (`ChatOpenAI` / `ChatAnthropic`). LangChain.js puts the runtime model
+ * in `extraParams.invocation_params` (or just `extraParams`), and the
+ * static config in `serialized.kwargs`.
+ *
+ * Resolution order:
+ *   1. extraParams.invocation_params.{model,model_name,model_id}
+ *   2. extraParams.{model,model_name,model_id}
+ *   3. serialized.kwargs.{model,model_name,model_id}
+ *   4. serialized.name (class-name fallback — still useful)
+ *   5. "unknown"
+ */
+export function deriveModelName(
+  serialized: Record<string, any> | undefined | null,
+  extraParams?: Record<string, unknown>,
+): string {
+  const ep = extraParams || {};
+  const inv = (ep.invocation_params as Record<string, unknown> | undefined) || {};
+  for (const k of ["model", "model_name", "model_id"] as const) {
+    const v = inv[k];
+    if (typeof v === "string" && v) return v;
+  }
+  for (const k of ["model", "model_name", "model_id"] as const) {
+    const v = ep[k];
+    if (typeof v === "string" && v) return v;
+  }
+  const s = serialized || {};
+  const sk = (s.kwargs as Record<string, unknown> | undefined) || {};
+  for (const k of ["model", "model_name", "model_id"] as const) {
+    const v = sk[k];
+    if (typeof v === "string" && v) return v;
+  }
+  if (typeof s.name === "string" && s.name) return s.name;
+  return "unknown";
+}
+
+/**
+ * Pull useful per-run metadata out of the trailing positional args of
+ * LangChain's callbacks (`tags`, `metadata`, `runType`). The returned
+ * object is suitable for shallow-merging into a per-event metadata block,
+ * so the AxonPush UI can group and filter events by graph node and tag
+ * without the user wiring a custom `metadata=` at handler construction.
+ *
+ * Returned keys (each only when non-empty):
+ *   - `langgraph_node`, `langgraph_step`, `langgraph_triggers`, `thread_id`
+ *   - `run_type`
+ *   - `tags`
+ */
+export function extractRunMetadata(
+  tags?: string[],
+  metadata?: Record<string, unknown>,
+  runType?: string,
+): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  const md = metadata || {};
+  for (const k of ["langgraph_node", "langgraph_step", "langgraph_triggers", "thread_id"]) {
+    const v = (md as Record<string, unknown>)[k];
+    if (v !== undefined && v !== null && v !== "") out[k] = v;
+  }
+  if (runType) out.run_type = runType;
+  if (tags && tags.length > 0) out.tags = tags;
+  return out;
+}
+
 export async function safePublish(
   client: AxonPush,
   channelId: ChannelIdInput,

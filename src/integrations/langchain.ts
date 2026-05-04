@@ -3,6 +3,9 @@ import type { EventType } from "../index.js";
 import type { TraceContext } from "../tracing.js";
 import {
   coerceChannelId,
+  deriveModelName,
+  deriveRunnableName,
+  extractRunMetadata,
   type IntegrationConfig,
   initTrace,
   safePublish,
@@ -46,10 +49,12 @@ export class AxonPushCallbackHandler {
     payload: Record<string, unknown>,
     runId?: string,
     parentRunId?: string,
+    extraMeta?: Record<string, unknown>,
   ): void {
     const meta = { ...this.baseMeta } as Record<string, unknown>;
     if (runId) meta.langchain_run_id = runId;
     if (parentRunId) meta.langchain_parent_run_id = parentRunId;
+    if (extraMeta) Object.assign(meta, extraMeta);
 
     void safePublish(this.client, this.channelId, identifier, eventType, payload, {
       agentId: this.agentId,
@@ -63,16 +68,21 @@ export class AxonPushCallbackHandler {
     inputs: Record<string, unknown>,
     runId?: string,
     parentRunId?: string,
+    tags?: string[],
+    metadata?: Record<string, unknown>,
+    runType?: string,
+    runName?: string,
   ): void {
     this.emit(
       "chain.start",
       "agent.start",
       {
-        chain_type: serialized?.name ?? "unknown",
+        chain_type: deriveRunnableName(serialized, runName, metadata),
         inputs: truncate(inputs),
       },
       runId,
       parentRunId,
+      extractRunMetadata(tags, metadata, runType),
     );
   }
 
@@ -95,16 +105,24 @@ export class AxonPushCallbackHandler {
     prompts: string[],
     runId?: string,
     parentRunId?: string,
+    extraParams?: Record<string, unknown>,
+    tags?: string[],
+    metadata?: Record<string, unknown>,
+    runName?: string,
   ): void {
     this.emit(
       "llm.start",
       "agent.start",
       {
-        model: serialized?.name ?? "unknown",
+        model: deriveModelName(serialized, extraParams),
         prompt_count: prompts.length,
       },
       runId,
       parentRunId,
+      {
+        ...extractRunMetadata(tags, metadata, "llm"),
+        ...(runName ? { run_name: runName } : {}),
+      },
     );
   }
 
