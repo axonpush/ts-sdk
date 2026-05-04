@@ -39,10 +39,26 @@ export class AxonPushLangGraphHandler extends AxonPushCallbackHandler {
     inputs: Record<string, unknown>,
     runId?: string,
     parentRunId?: string,
+    tags?: string[],
+    metadata?: Record<string, unknown>,
+    runType?: string,
+    runName?: string,
   ): void {
-    super.handleChainStart(serialized, inputs, runId, parentRunId);
+    super.handleChainStart(
+      serialized,
+      inputs,
+      runId,
+      parentRunId,
+      tags,
+      metadata,
+      runType,
+      runName,
+    );
 
-    const nodeName = serialized?.name;
+    const nodeName =
+      runName ||
+      (typeof metadata?.langgraph_node === "string" ? (metadata.langgraph_node as string) : "") ||
+      serialized?.name;
     if (nodeName) {
       void safePublish(
         this._client,
