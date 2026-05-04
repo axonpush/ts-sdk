@@ -78,9 +78,9 @@ describe("deriveModelName", () => {
   });
 
   it("falls back to extraParams.model_name", () => {
-    expect(
-      deriveModelName({ name: "ChatAnthropic" }, { model_name: "claude-sonnet-4-6" }),
-    ).toBe("claude-sonnet-4-6");
+    expect(deriveModelName({ name: "ChatAnthropic" }, { model_name: "claude-sonnet-4-6" })).toBe(
+      "claude-sonnet-4-6",
+    );
   });
 
   it("falls back to serialized.kwargs.model", () => {
