@@ -59,6 +59,8 @@ describe("AxonPushSpanExporter", () => {
     expect(event.channelId).toBe("ch-1");
     expect(event.eventType).toBe("app.span");
     expect(event.identifier).toBe("test-span");
+    expect(event.traceId).toBe("a".repeat(32));
+    expect(event.spanId).toBe("b".repeat(16));
     const payload = event.payload as Record<string, unknown>;
     expect(payload.name).toBe("test-span");
     expect(payload.traceId).toBe("a".repeat(32));
@@ -109,6 +111,7 @@ describe("AxonPushSpanExporter", () => {
 
     const payload = published[0]!.payload as Record<string, unknown>;
     expect(payload.parentSpanId).toBe("c".repeat(16));
+    expect(published[0]?.parentSpanId).toBe("c".repeat(16));
 
     await exporter.shutdown();
   });

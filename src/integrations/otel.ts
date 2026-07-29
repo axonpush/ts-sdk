@@ -6,7 +6,6 @@ import {
   coerceChannelId,
   dispatchPublish,
   type IntegrationConfig,
-  initTrace,
   makePublisher,
   type PublisherHolder,
 } from "./_base.js";
@@ -103,14 +102,12 @@ const EXPORT_FAILED = 1;
 export class AxonPushSpanExporter {
   private readonly client: AxonPush;
   private readonly channelId: string;
-  private readonly trace: ReturnType<typeof initTrace>;
   private readonly resourceOverride: Record<string, unknown>;
   private readonly holder: PublisherHolder;
 
   constructor(config: OtelExporterConfig) {
     this.client = config.client;
     this.channelId = coerceChannelId(config.channelId);
-    this.trace = initTrace(config.traceId);
     this.holder = makePublisher(config.client, config, "otelExporter");
 
     const r: Record<string, unknown> = {};
@@ -201,8 +198,9 @@ export class AxonPushSpanExporter {
       identifier: span.name,
       payload: payload as Record<string, never>,
       channelId: this.channelId,
-      traceId: this.trace.traceId,
-      spanId: this.trace.nextSpanId(),
+      traceId: ctx.traceId,
+      spanId: ctx.spanId,
+      parentSpanId,
       eventType,
       metadata: { framework: "opentelemetry" } as unknown as Record<string, never>,
     };

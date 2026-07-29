@@ -560,6 +560,50 @@
         ]
       }
     },
+    "/organizations/{id}/telemetry-policy": {
+      "get": {
+        "operationId": "OrganizationController_getTelemetryPolicy",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "organizations"
+        ]
+      },
+      "patch": {
+        "operationId": "OrganizationController_updateTelemetryPolicy",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "organizations"
+        ]
+      }
+    },
     "/organizations/{id}/invitations": {
       "post": {
         "operationId": "OrganizationController_createInvitation",
@@ -719,6 +763,121 @@
         ]
       }
     },
+    "/billing/plans": {
+      "get": {
+        "operationId": "BillingController_getPlans",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BillingPlansResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "billing"
+        ]
+      }
+    },
+    "/billing/usage": {
+      "get": {
+        "operationId": "BillingController_getUsage",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BillingUsageResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "billing"
+        ]
+      }
+    },
+    "/billing/checkout": {
+      "post": {
+        "operationId": "BillingController_createCheckout",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BillingCheckoutRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BillingCheckoutResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "billing"
+        ]
+      }
+    },
+    "/billing/portal": {
+      "get": {
+        "operationId": "BillingController_getPortal",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BillingPortalResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "billing"
+        ]
+      }
+    },
+    "/billing/webhook": {
+      "post": {
+        "operationId": "BillingController_handleWebhook",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BillingWebhookResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "billing"
+        ]
+      }
+    },
     "/feature-flags/me": {
       "get": {
         "operationId": "FeatureFlagsController_me",
@@ -737,6 +896,20 @@
         },
         "tags": [
           "feature-flags"
+        ]
+      }
+    },
+    "/capabilities": {
+      "get": {
+        "operationId": "CapabilitiesController_getCapabilities",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Backend-authoritative product and deployment capabilities"
+          }
+        },
+        "tags": [
+          "capabilities"
         ]
       }
     },
@@ -898,6 +1071,592 @@
         },
         "tags": [
           "environments"
+        ]
+      }
+    },
+    "/event": {
+      "post": {
+        "operationId": "EventController_createEvent",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Stripe-style client-supplied idempotency key (1–255 ASCII-printable chars). Cached response replay for retried requests.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateEventDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventIngestResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "event"
+        ]
+      }
+    },
+    "/event/{channelId}/list": {
+      "get": {
+        "operationId": "EventController_listEvents",
+        "parameters": [
+          {
+            "name": "channelId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "payloadFilter",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "description": "Page size, 1-1000. Defaults to 100.",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "until",
+            "required": false,
+            "in": "query",
+            "description": "ISO 8601 datetime (exclusive upper bound).",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "since",
+            "required": false,
+            "in": "query",
+            "description": "ISO 8601 datetime (inclusive lower bound).",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "traceId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "agentId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "eventType",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "name": "environment",
+            "required": false,
+            "in": "query",
+            "description": "Environment slug. Resolved server-side to environmentId.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventListResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "event"
+        ]
+      }
+    },
+    "/events/search": {
+      "get": {
+        "operationId": "EventsSearchController_search",
+        "parameters": [
+          {
+            "name": "query",
+            "required": false,
+            "in": "query",
+            "description": "Case-insensitive free-text match over event fields and retained payload.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "source",
+            "required": false,
+            "in": "query",
+            "description": "Filter by ingest source (sdk, otlp, sentry, webhook, mcp or custom).",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "payloadFilter",
+            "required": false,
+            "in": "query",
+            "description": "JSON-path / dotted filter applied to the event payload.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "description": "Page size, 1-1000. Defaults to 100.",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "Opaque pagination cursor returned by a previous call.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "until",
+            "required": false,
+            "in": "query",
+            "description": "ISO 8601 datetime (exclusive upper bound).",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "since",
+            "required": false,
+            "in": "query",
+            "description": "ISO 8601 datetime (inclusive lower bound).",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "traceId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "agentId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "eventType",
+            "required": false,
+            "in": "query",
+            "description": "Repeat or comma-separate to filter by multiple event types.",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "name": "channelId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "appId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "environment",
+            "required": false,
+            "in": "query",
+            "description": "Environment slug. Resolved server-side to environmentId.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventListResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "events"
+        ]
+      }
+    },
+    "/channel": {
+      "get": {
+        "operationId": "ChannelController_listChannels",
+        "parameters": [
+          {
+            "name": "appId",
+            "required": true,
+            "in": "query",
+            "description": "App UUID to scope the listing.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ChannelResponseDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "channels"
+        ]
+      },
+      "post": {
+        "operationId": "ChannelController_createChannel",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/createChannelDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChannelResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "channels"
+        ]
+      }
+    },
+    "/channel/{id}": {
+      "get": {
+        "operationId": "ChannelController_getChannel",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChannelResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "channels"
+        ]
+      },
+      "put": {
+        "operationId": "ChannelController_updateChannel",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OkResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "channels"
+        ]
+      },
+      "delete": {
+        "operationId": "ChannelController_deleteChannel",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OkResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "channels"
+        ]
+      }
+    },
+    "/apps": {
+      "post": {
+        "operationId": "AppsController_createApp",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateAppDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "apps"
+        ]
+      },
+      "get": {
+        "operationId": "AppsController_getAllApps",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AppResponseDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "apps"
+        ]
+      }
+    },
+    "/apps/{id}": {
+      "get": {
+        "operationId": "AppsController_getApp",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "apps"
+        ]
+      },
+      "patch": {
+        "operationId": "AppsController_editApp",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateAppDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OkResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "apps"
+        ]
+      },
+      "delete": {
+        "operationId": "AppsController_deleteApp",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OkResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "apps"
         ]
       }
     },
@@ -1067,20 +1826,50 @@
         ]
       }
     },
-    "/channel": {
-      "get": {
-        "operationId": "ChannelController_listChannels",
-        "parameters": [
-          {
-            "name": "appId",
-            "required": true,
-            "in": "query",
-            "description": "App UUID to scope the listing.",
-            "schema": {
-              "type": "string"
+    "/mcp": {
+      "post": {
+        "operationId": "McpController_handle",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        }
+      }
+    },
+    "/users/me/mcp-tokens": {
+      "post": {
+        "operationId": "McpTokenController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateMcpTokenDto"
+              }
             }
           }
-        ],
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/McpTokenCreateResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "mcp-tokens"
+        ]
+      },
+      "get": {
+        "operationId": "McpTokenController_list",
+        "parameters": [],
         "responses": {
           "200": {
             "description": "",
@@ -1089,7 +1878,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/ChannelResponseDto"
+                    "$ref": "#/components/schemas/McpTokenResponseDto"
                   }
                 }
               }
@@ -1097,98 +1886,13 @@
           }
         },
         "tags": [
-          "channels"
-        ]
-      },
-      "post": {
-        "operationId": "ChannelController_createChannel",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/createChannelDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ChannelResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "tags": [
-          "channels"
+          "mcp-tokens"
         ]
       }
     },
-    "/channel/{id}": {
-      "get": {
-        "operationId": "ChannelController_getChannel",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ChannelResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "tags": [
-          "channels"
-        ]
-      },
-      "put": {
-        "operationId": "ChannelController_updateChannel",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/OkResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "tags": [
-          "channels"
-        ]
-      },
+    "/users/me/mcp-tokens/{id}": {
       "delete": {
-        "operationId": "ChannelController_deleteChannel",
+        "operationId": "McpTokenController_revoke",
         "parameters": [
           {
             "name": "id",
@@ -1205,145 +1909,49 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/OkResponseDto"
+                  "$ref": "#/components/schemas/MessageResponseDto"
                 }
               }
             }
           }
         },
         "tags": [
-          "channels"
+          "mcp-tokens"
         ]
       }
     },
-    "/event": {
-      "post": {
-        "operationId": "EventController_createEvent",
-        "parameters": [
-          {
-            "name": "Idempotency-Key",
-            "in": "header",
-            "description": "Stripe-style client-supplied idempotency key (1–255 ASCII-printable chars). Cached response replay for retried requests.",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateEventDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/EventIngestResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "tags": [
-          "event"
-        ]
-      }
-    },
-    "/event/{channelId}/list": {
+    "/traces": {
       "get": {
-        "operationId": "EventController_listEvents",
+        "operationId": "TraceController_listTraces",
         "parameters": [
           {
-            "name": "channelId",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "payloadFilter",
+            "name": "page",
             "required": false,
             "in": "query",
             "schema": {
-              "type": "string"
+              "type": "number"
             }
           },
           {
             "name": "limit",
             "required": false,
             "in": "query",
-            "description": "Page size, 1-1000. Defaults to 100.",
             "schema": {
               "type": "number"
             }
           },
           {
-            "name": "cursor",
+            "name": "appId",
             "required": false,
             "in": "query",
             "schema": {
               "type": "string"
-            }
-          },
-          {
-            "name": "until",
-            "required": false,
-            "in": "query",
-            "description": "ISO 8601 datetime (exclusive upper bound).",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "since",
-            "required": false,
-            "in": "query",
-            "description": "ISO 8601 datetime (inclusive lower bound).",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "traceId",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "agentId",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "eventType",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
             }
           },
           {
             "name": "environment",
             "required": false,
             "in": "query",
-            "description": "Environment slug. Resolved server-side to environmentId.",
             "schema": {
               "type": "string"
             }
@@ -1351,81 +1959,121 @@
         ],
         "responses": {
           "200": {
-            "description": "",
+            "description": "Paginated list of trace summaries",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/EventListResponseDto"
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "traceId": {
+                            "type": "string"
+                          },
+                          "eventCount": {
+                            "type": "number"
+                          },
+                          "agents": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          },
+                          "eventTypes": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          },
+                          "startTime": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "endTime": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "duration": {
+                            "type": "number"
+                          },
+                          "errorCount": {
+                            "type": "number"
+                          },
+                          "toolCallCount": {
+                            "type": "number"
+                          },
+                          "handoffCount": {
+                            "type": "number"
+                          },
+                          "totalTokens": {
+                            "type": "number"
+                          },
+                          "costUsd": {
+                            "type": "number",
+                            "nullable": true,
+                            "description": "Known reported/estimated cost. Omitted when pricing is unknown."
+                          },
+                          "status": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "traceId",
+                          "eventCount",
+                          "agents",
+                          "eventTypes",
+                          "startTime",
+                          "endTime",
+                          "duration",
+                          "errorCount",
+                          "toolCallCount",
+                          "handoffCount"
+                        ]
+                      }
+                    },
+                    "meta": {
+                      "type": "object",
+                      "properties": {
+                        "page": {
+                          "type": "number"
+                        },
+                        "limit": {
+                          "type": "number"
+                        },
+                        "hasMore": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "page",
+                        "limit",
+                        "hasMore"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta"
+                  ]
                 }
               }
             }
           }
         },
         "tags": [
-          "event"
+          "traces"
         ]
       }
     },
-    "/events/search": {
+    "/traces/stats": {
       "get": {
-        "operationId": "EventsSearchController_search",
+        "operationId": "TraceController_getDashboardStats",
         "parameters": [
           {
-            "name": "source",
-            "required": false,
-            "in": "query",
-            "description": "Filter by ingest source (e.g. \"app\", \"sentry\", \"otlp\").",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "payloadFilter",
-            "required": false,
-            "in": "query",
-            "description": "JSON-path / dotted filter applied to the event payload.",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "limit",
-            "required": false,
-            "in": "query",
-            "description": "Page size, 1-1000. Defaults to 100.",
-            "schema": {
-              "type": "number"
-            }
-          },
-          {
-            "name": "cursor",
-            "required": false,
-            "in": "query",
-            "description": "Opaque pagination cursor returned by a previous call.",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "until",
-            "required": false,
-            "in": "query",
-            "description": "ISO 8601 datetime (exclusive upper bound).",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "since",
-            "required": false,
-            "in": "query",
-            "description": "ISO 8601 datetime (inclusive lower bound).",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "traceId",
+            "name": "appId",
             "required": false,
             "in": "query",
             "schema": {
@@ -1433,29 +2081,87 @@
             }
           },
           {
-            "name": "agentId",
+            "name": "environment",
             "required": false,
             "in": "query",
             "schema": {
               "type": "string"
             }
-          },
-          {
-            "name": "eventType",
-            "required": false,
-            "in": "query",
-            "description": "Repeat or comma-separate to filter by multiple event types.",
-            "schema": {
-              "type": "array",
-              "items": {
-                "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Aggregated dashboard stats for the caller organization",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "totalEvents": {
+                      "type": "number"
+                    },
+                    "eventsToday": {
+                      "type": "number"
+                    },
+                    "totalTraces": {
+                      "type": "number"
+                    },
+                    "tracesToday": {
+                      "type": "number"
+                    },
+                    "errorCount": {
+                      "type": "number"
+                    },
+                    "errorRate": {
+                      "type": "number"
+                    },
+                    "avgTraceDuration": {
+                      "type": "number"
+                    },
+                    "eventsByHour": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "hour": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "count": {
+                            "type": "number"
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "required": [
+                    "totalEvents",
+                    "eventsToday",
+                    "totalTraces",
+                    "tracesToday",
+                    "errorCount",
+                    "errorRate",
+                    "avgTraceDuration",
+                    "eventsByHour"
+                  ]
+                }
               }
             }
-          },
+          }
+        },
+        "tags": [
+          "traces"
+        ]
+      }
+    },
+    "/traces/{traceId}/events": {
+      "get": {
+        "operationId": "TraceController_getTraceEvents",
+        "parameters": [
           {
-            "name": "channelId",
-            "required": false,
-            "in": "query",
+            "name": "traceId",
+            "required": true,
+            "in": "path",
             "schema": {
               "type": "string"
             }
@@ -1472,7 +2178,6 @@
             "name": "environment",
             "required": false,
             "in": "query",
-            "description": "Environment slug. Resolved server-side to environmentId.",
             "schema": {
               "type": "string"
             }
@@ -1480,63 +2185,13 @@
         ],
         "responses": {
           "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/EventListResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "tags": [
-          "events"
-        ]
-      }
-    },
-    "/apps": {
-      "post": {
-        "operationId": "AppsController_createApp",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateAppDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AppResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "tags": [
-          "apps"
-        ]
-      },
-      "get": {
-        "operationId": "AppsController_getAllApps",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": "",
+            "description": "All events belonging to a trace, ordered by authoritative occurrence time",
             "content": {
               "application/json": {
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/AppResponseDto"
+                    "$ref": "#/components/schemas/EventResponseDto"
                   }
                 }
               }
@@ -1544,18 +2199,34 @@
           }
         },
         "tags": [
-          "apps"
+          "traces"
         ]
       }
     },
-    "/apps/{id}": {
+    "/traces/{traceId}/summary": {
       "get": {
-        "operationId": "AppsController_getApp",
+        "operationId": "TraceController_getTraceSummary",
         "parameters": [
           {
-            "name": "id",
+            "name": "traceId",
             "required": true,
             "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "appId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "environment",
+            "required": false,
+            "in": "query",
             "schema": {
               "type": "string"
             }
@@ -1563,84 +2234,81 @@
         ],
         "responses": {
           "200": {
-            "description": "",
+            "description": "Aggregated summary for a single trace",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/AppResponseDto"
+                  "type": "object",
+                  "properties": {
+                    "traceId": {
+                      "type": "string"
+                    },
+                    "eventCount": {
+                      "type": "number"
+                    },
+                    "agents": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "eventTypes": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "startTime": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "endTime": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "duration": {
+                      "type": "number"
+                    },
+                    "errorCount": {
+                      "type": "number"
+                    },
+                    "toolCallCount": {
+                      "type": "number"
+                    },
+                    "handoffCount": {
+                      "type": "number"
+                    },
+                    "totalTokens": {
+                      "type": "number"
+                    },
+                    "costUsd": {
+                      "type": "number",
+                      "nullable": true,
+                      "description": "Known reported/estimated cost. Omitted when pricing is unknown."
+                    },
+                    "status": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "traceId",
+                    "eventCount",
+                    "agents",
+                    "eventTypes",
+                    "startTime",
+                    "endTime",
+                    "duration",
+                    "errorCount",
+                    "toolCallCount",
+                    "handoffCount"
+                  ]
                 }
               }
             }
           }
         },
         "tags": [
-          "apps"
-        ]
-      },
-      "patch": {
-        "operationId": "AppsController_editApp",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateAppDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/OkResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "tags": [
-          "apps"
-        ]
-      },
-      "delete": {
-        "operationId": "AppsController_deleteApp",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/OkResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "tags": [
-          "apps"
+          "traces"
         ]
       }
     },
@@ -1809,252 +2477,42 @@
         ]
       }
     },
-    "/traces": {
-      "get": {
-        "operationId": "TraceController_listTraces",
-        "parameters": [
-          {
-            "name": "page",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "type": "number"
-            }
-          },
-          {
-            "name": "limit",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "type": "number"
-            }
-          },
-          {
-            "name": "appId",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "environment",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "type": "string"
+    "/export-destinations": {
+      "post": {
+        "operationId": "ExportController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateExportDestinationDto"
+              }
             }
           }
-        ],
+        },
         "responses": {
-          "200": {
-            "description": "Paginated list of trace summaries",
+          "201": {
+            "description": "",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "data": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "traceId": {
-                            "type": "string"
-                          },
-                          "eventCount": {
-                            "type": "number"
-                          },
-                          "agents": {
-                            "type": "array",
-                            "items": {
-                              "type": "string"
-                            }
-                          },
-                          "eventTypes": {
-                            "type": "array",
-                            "items": {
-                              "type": "string"
-                            }
-                          },
-                          "startTime": {
-                            "type": "string",
-                            "format": "date-time"
-                          },
-                          "endTime": {
-                            "type": "string",
-                            "format": "date-time"
-                          },
-                          "duration": {
-                            "type": "number"
-                          },
-                          "errorCount": {
-                            "type": "number"
-                          },
-                          "toolCallCount": {
-                            "type": "number"
-                          },
-                          "handoffCount": {
-                            "type": "number"
-                          }
-                        },
-                        "required": [
-                          "traceId",
-                          "eventCount",
-                          "agents",
-                          "eventTypes",
-                          "startTime",
-                          "endTime",
-                          "duration",
-                          "errorCount",
-                          "toolCallCount",
-                          "handoffCount"
-                        ]
-                      }
-                    },
-                    "meta": {
-                      "type": "object",
-                      "properties": {
-                        "page": {
-                          "type": "number"
-                        },
-                        "limit": {
-                          "type": "number"
-                        },
-                        "hasMore": {
-                          "type": "boolean"
-                        }
-                      },
-                      "required": [
-                        "page",
-                        "limit",
-                        "hasMore"
-                      ]
-                    }
-                  },
-                  "required": [
-                    "data",
-                    "meta"
-                  ]
+                  "$ref": "#/components/schemas/ExportDestinationResponseDto"
                 }
               }
             }
           }
         },
         "tags": [
-          "traces"
+          "export-destinations"
         ]
-      }
-    },
-    "/traces/stats": {
+      },
       "get": {
-        "operationId": "TraceController_getDashboardStats",
+        "operationId": "ExportController_list",
         "parameters": [
           {
-            "name": "appId",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "environment",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Aggregated dashboard stats for the caller organization",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "totalEvents": {
-                      "type": "number"
-                    },
-                    "eventsToday": {
-                      "type": "number"
-                    },
-                    "totalTraces": {
-                      "type": "number"
-                    },
-                    "tracesToday": {
-                      "type": "number"
-                    },
-                    "errorCount": {
-                      "type": "number"
-                    },
-                    "errorRate": {
-                      "type": "number"
-                    },
-                    "avgTraceDuration": {
-                      "type": "number"
-                    },
-                    "eventsByHour": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "hour": {
-                            "type": "string",
-                            "format": "date-time"
-                          },
-                          "count": {
-                            "type": "number"
-                          }
-                        }
-                      }
-                    }
-                  },
-                  "required": [
-                    "totalEvents",
-                    "eventsToday",
-                    "totalTraces",
-                    "tracesToday",
-                    "errorCount",
-                    "errorRate",
-                    "avgTraceDuration",
-                    "eventsByHour"
-                  ]
-                }
-              }
-            }
-          }
-        },
-        "tags": [
-          "traces"
-        ]
-      }
-    },
-    "/traces/{traceId}/events": {
-      "get": {
-        "operationId": "TraceController_getTraceEvents",
-        "parameters": [
-          {
-            "name": "traceId",
+            "name": "envSlug",
             "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "appId",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "environment",
-            "required": false,
             "in": "query",
             "schema": {
               "type": "string"
@@ -2063,13 +2521,13 @@
         ],
         "responses": {
           "200": {
-            "description": "All events belonging to a trace, ordered by createdAt ASC",
+            "description": "",
             "content": {
               "application/json": {
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/EventResponseDto"
+                    "$ref": "#/components/schemas/ExportDestinationResponseDto"
                   }
                 }
               }
@@ -2077,34 +2535,18 @@
           }
         },
         "tags": [
-          "traces"
+          "export-destinations"
         ]
       }
     },
-    "/traces/{traceId}/summary": {
+    "/export-destinations/{id}": {
       "get": {
-        "operationId": "TraceController_getTraceSummary",
+        "operationId": "ExportController_get",
         "parameters": [
           {
-            "name": "traceId",
+            "name": "id",
             "required": true,
             "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "appId",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "environment",
-            "required": false,
-            "in": "query",
             "schema": {
               "type": "string"
             }
@@ -2112,70 +2554,84 @@
         ],
         "responses": {
           "200": {
-            "description": "Aggregated summary for a single trace",
+            "description": "",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "traceId": {
-                      "type": "string"
-                    },
-                    "eventCount": {
-                      "type": "number"
-                    },
-                    "agents": {
-                      "type": "array",
-                      "items": {
-                        "type": "string"
-                      }
-                    },
-                    "eventTypes": {
-                      "type": "array",
-                      "items": {
-                        "type": "string"
-                      }
-                    },
-                    "startTime": {
-                      "type": "string",
-                      "format": "date-time"
-                    },
-                    "endTime": {
-                      "type": "string",
-                      "format": "date-time"
-                    },
-                    "duration": {
-                      "type": "number"
-                    },
-                    "errorCount": {
-                      "type": "number"
-                    },
-                    "toolCallCount": {
-                      "type": "number"
-                    },
-                    "handoffCount": {
-                      "type": "number"
-                    }
-                  },
-                  "required": [
-                    "traceId",
-                    "eventCount",
-                    "agents",
-                    "eventTypes",
-                    "startTime",
-                    "endTime",
-                    "duration",
-                    "errorCount",
-                    "toolCallCount",
-                    "handoffCount"
-                  ]
+                  "$ref": "#/components/schemas/ExportDestinationResponseDto"
                 }
               }
             }
           }
         },
         "tags": [
-          "traces"
+          "export-destinations"
+        ]
+      },
+      "patch": {
+        "operationId": "ExportController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateExportDestinationDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExportDestinationResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "export-destinations"
+        ]
+      },
+      "delete": {
+        "operationId": "ExportController_remove",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "export-destinations"
         ]
       }
     },
@@ -2767,6 +3223,682 @@
           "sso"
         ]
       }
+    },
+    "/admin/overview": {
+      "get": {
+        "operationId": "AdminController_getOverview",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminOverviewDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/admin/signups": {
+      "get": {
+        "operationId": "AdminController_getSignups",
+        "parameters": [
+          {
+            "name": "days",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminSignupsDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/admin/orgs": {
+      "get": {
+        "operationId": "AdminController_getOrgs",
+        "parameters": [
+          {
+            "name": "search",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminOrgListDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/admin/customers": {
+      "post": {
+        "operationId": "AdminController_createCustomer",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminCreateCustomerDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminCreateCustomerResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/admin/orgs/{id}": {
+      "get": {
+        "operationId": "AdminController_getOrg",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminOrgDetailDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/admin/orgs/{orgId}/plan": {
+      "post": {
+        "operationId": "AdminController_setOrgPlan",
+        "parameters": [
+          {
+            "name": "orgId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminSetPlanDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminOrgMutationResponseDto"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminOrgMutationResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/admin/orgs/{orgId}/limits": {
+      "post": {
+        "operationId": "AdminController_setOrgLimits",
+        "parameters": [
+          {
+            "name": "orgId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminSetLimitsDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminOrgMutationResponseDto"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminOrgMutationResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/admin/orgs/{orgId}/status": {
+      "post": {
+        "operationId": "AdminController_setOrgStatus",
+        "parameters": [
+          {
+            "name": "orgId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminSetStatusDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminOrgMutationResponseDto"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminOrgMutationResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/admin/orgs/{orgId}/trial": {
+      "post": {
+        "operationId": "AdminController_setOrgTrial",
+        "parameters": [
+          {
+            "name": "orgId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminSetTrialDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminOrgMutationResponseDto"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminOrgMutationResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/admin/orgs/{orgId}/billing": {
+      "post": {
+        "operationId": "AdminController_setOrgBilling",
+        "parameters": [
+          {
+            "name": "orgId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminUpdateBillingDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminOrgMutationResponseDto"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminOrgMutationResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/admin/orgs/{orgId}/disable": {
+      "post": {
+        "operationId": "AdminController_disableOrg",
+        "parameters": [
+          {
+            "name": "orgId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminOrgMutationResponseDto"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminOrgMutationResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/admin/orgs/{orgId}/enable": {
+      "post": {
+        "operationId": "AdminController_enableOrg",
+        "parameters": [
+          {
+            "name": "orgId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminOrgMutationResponseDto"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminOrgMutationResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/admin/users": {
+      "get": {
+        "operationId": "AdminController_getUsers",
+        "parameters": [
+          {
+            "name": "search",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminUserListDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/admin/users/{userId}/disable": {
+      "post": {
+        "operationId": "AdminController_disableUser",
+        "parameters": [
+          {
+            "name": "userId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminOkResponseDto"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminOkResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/admin/users/{userId}/enable": {
+      "post": {
+        "operationId": "AdminController_enableUser",
+        "parameters": [
+          {
+            "name": "userId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminOkResponseDto"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminOkResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/admin/billing-events": {
+      "get": {
+        "operationId": "AdminController_listBillingEvents",
+        "parameters": [
+          {
+            "name": "limit",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "orgId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "eventName",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminBillingEventListDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/admin/billing-events/{id}/replay": {
+      "post": {
+        "operationId": "AdminController_replayBillingEvent",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminBillingEventReplayResponseDto"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminBillingEventReplayResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "admin"
+        ]
+      }
     }
   },
   "info": {
@@ -2875,6 +4007,10 @@
             "type": "string",
             "nullable": true
           },
+          "isSuperAdmin": {
+            "type": "boolean",
+            "description": "Whether this account has product-wide superadmin (admin panel) access"
+          },
           "deletedAt": {
             "type": "string",
             "nullable": true
@@ -2888,7 +4024,8 @@
           "username",
           "googleId",
           "roles",
-          "organizationId"
+          "organizationId",
+          "isSuperAdmin"
         ]
       },
       "SignInDto": {
@@ -3029,6 +4166,14 @@
           },
           "region": {
             "type": "string"
+          },
+          "authorizerName": {
+            "type": "string",
+            "description": "IoT custom authorizer name to invoke. Already encoded in `presignedWssUrl` query string; exposed for clients that need to set it via header."
+          },
+          "authToken": {
+            "type": "string",
+            "description": "Bearer token to pass as the MQTT CONNECT username. The IoT custom authorizer reads it from `mqttContext.username`."
           }
         },
         "required": [
@@ -3445,12 +4590,202 @@
           "userId"
         ]
       },
+      "PlanFeaturesDto": {
+        "type": "object",
+        "properties": {
+          "rbac": {
+            "type": "boolean"
+          },
+          "auditLog": {
+            "type": "boolean"
+          },
+          "sso": {
+            "type": "boolean"
+          },
+          "customRetention": {
+            "type": "boolean"
+          }
+        }
+      },
+      "PlanVariantsDto": {
+        "type": "object",
+        "properties": {
+          "monthly": {
+            "type": "string"
+          },
+          "annual": {
+            "type": "string"
+          }
+        }
+      },
+      "PlanLimitsDto": {
+        "type": "object",
+        "properties": {
+          "events": {
+            "type": "number",
+            "nullable": true
+          },
+          "retentionDays": {
+            "type": "number",
+            "nullable": true
+          },
+          "seats": {
+            "type": "number",
+            "nullable": true
+          },
+          "features": {
+            "$ref": "#/components/schemas/PlanFeaturesDto"
+          },
+          "lemonsqueezyVariants": {
+            "$ref": "#/components/schemas/PlanVariantsDto"
+          }
+        },
+        "required": [
+          "events",
+          "retentionDays",
+          "seats",
+          "features"
+        ]
+      },
+      "BillingPlansResponseDto": {
+        "type": "object",
+        "properties": {
+          "plans": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/PlanLimitsDto"
+            },
+            "description": "Plan id keyed by Plan enum value (free, pro, team, scale, selfhost).",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PlanLimitsDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "plans"
+        ]
+      },
+      "BillingUsageResponseDto": {
+        "type": "object",
+        "properties": {
+          "plan": {
+            "type": "string"
+          },
+          "used": {
+            "type": "number"
+          },
+          "limit": {
+            "type": "number",
+            "nullable": true
+          },
+          "retentionDays": {
+            "type": "number",
+            "nullable": true
+          },
+          "seats": {
+            "type": "number",
+            "nullable": true
+          },
+          "cycleStartedAt": {
+            "type": "string",
+            "nullable": true
+          },
+          "subscriptionStatus": {
+            "type": "string",
+            "enum": [
+              "active",
+              "past_due",
+              "paused",
+              "trialing",
+              "trial_expired"
+            ]
+          },
+          "trialEndsAt": {
+            "type": "string",
+            "nullable": true,
+            "description": "ISO timestamp; null when no trial active"
+          },
+          "hasBillingPortal": {
+            "type": "boolean",
+            "description": "Whether a LemonSqueezy customer portal exists (a real subscription created one)"
+          }
+        },
+        "required": [
+          "plan",
+          "used",
+          "subscriptionStatus",
+          "hasBillingPortal"
+        ]
+      },
+      "BillingCheckoutRequestDto": {
+        "type": "object",
+        "properties": {
+          "plan": {
+            "type": "string",
+            "enum": [
+              "pro",
+              "team"
+            ]
+          },
+          "cadence": {
+            "type": "string",
+            "enum": [
+              "monthly",
+              "annual"
+            ],
+            "default": "monthly"
+          }
+        },
+        "required": [
+          "plan"
+        ]
+      },
+      "BillingCheckoutResponseDto": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "url"
+        ]
+      },
+      "BillingPortalResponseDto": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "url"
+        ]
+      },
+      "BillingWebhookResponseDto": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          },
+          "deduped": {
+            "type": "boolean"
+          },
+          "skipped": {
+            "type": "string"
+          },
+          "enqueuedRetry": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "ok"
+        ]
+      },
       "FeatureFlagsResponseDto": {
         "type": "object",
         "properties": {
-          "billing": {
-            "type": "boolean"
-          },
           "environments": {
             "type": "boolean"
           },
@@ -3459,13 +4794,16 @@
           },
           "asyncIngest": {
             "type": "boolean"
+          },
+          "mcpServer": {
+            "type": "boolean"
           }
         },
         "required": [
-          "billing",
           "environments",
           "sentryIngest",
-          "asyncIngest"
+          "asyncIngest",
+          "mcpServer"
         ]
       },
       "CreateEnvironmentDto": {
@@ -3507,6 +4845,368 @@
             "type": "boolean"
           }
         }
+      },
+      "CreateEventDto": {
+        "type": "object",
+        "properties": {
+          "identifier": {
+            "type": "string"
+          },
+          "payload": {
+            "type": "object"
+          },
+          "channel_id": {
+            "type": "string"
+          },
+          "agentId": {
+            "type": "string"
+          },
+          "traceId": {
+            "type": "string"
+          },
+          "spanId": {
+            "type": "string"
+          },
+          "parentSpanId": {
+            "type": "string"
+          },
+          "parentEventId": {
+            "type": "string"
+          },
+          "eventType": {
+            "type": "string",
+            "enum": [
+              "agent.start",
+              "agent.end",
+              "agent.message",
+              "agent.tool_call.start",
+              "agent.tool_call.end",
+              "agent.error",
+              "agent.handoff",
+              "agent.llm.token",
+              "agent.log",
+              "app.log",
+              "app.span",
+              "custom"
+            ],
+            "default": "custom"
+          },
+          "metadata": {
+            "type": "object"
+          },
+          "environment": {
+            "type": "string",
+            "description": "Environment slug override. Only honored when the API key has allowEnvironmentOverride=true."
+          },
+          "sync": {
+            "type": "boolean",
+            "default": false,
+            "description": "When true, wait for the event to be persisted to the DB before returning. Use only for audit-critical calls — the default async path returns in under a millisecond."
+          }
+        },
+        "required": [
+          "identifier",
+          "payload",
+          "channel_id"
+        ]
+      },
+      "EventIngestResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Alias of eventId, populated by the global IdAliasInterceptor."
+          },
+          "eventId": {
+            "type": "string"
+          },
+          "identifier": {
+            "type": "string"
+          },
+          "dedupKey": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "queued": {
+            "type": "boolean"
+          },
+          "duplicate": {
+            "type": "boolean"
+          },
+          "environmentId": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "eventId",
+          "identifier",
+          "dedupKey",
+          "createdAt",
+          "queued"
+        ]
+      },
+      "EventResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "eventId": {
+            "type": "string"
+          },
+          "orgId": {
+            "type": "string"
+          },
+          "appId": {
+            "type": "string"
+          },
+          "channelId": {
+            "type": "string"
+          },
+          "environmentId": {
+            "type": "string"
+          },
+          "eventType": {
+            "type": "string"
+          },
+          "agentId": {
+            "type": "string"
+          },
+          "traceId": {
+            "type": "string"
+          },
+          "spanId": {
+            "type": "string"
+          },
+          "parentSpanId": {
+            "type": "string"
+          },
+          "parentEventId": {
+            "type": "string"
+          },
+          "identifier": {
+            "type": "string"
+          },
+          "payload": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "occurredAt": {
+            "type": "string"
+          },
+          "startTimeUnixNano": {
+            "type": "string"
+          },
+          "endTimeUnixNano": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "semanticKind": {
+            "type": "string"
+          },
+          "operationName": {
+            "type": "string"
+          },
+          "durationMs": {
+            "type": "number"
+          },
+          "status": {
+            "type": "string"
+          },
+          "serviceName": {
+            "type": "string"
+          },
+          "serviceVersion": {
+            "type": "string"
+          },
+          "providerName": {
+            "type": "string"
+          },
+          "requestModel": {
+            "type": "string"
+          },
+          "responseModel": {
+            "type": "string"
+          },
+          "toolName": {
+            "type": "string"
+          },
+          "totalTokens": {
+            "type": "number"
+          },
+          "costUsd": {
+            "type": "number"
+          },
+          "updatedAt": {
+            "type": "string"
+          },
+          "ttl": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "id",
+          "eventId",
+          "orgId",
+          "appId",
+          "channelId",
+          "eventType",
+          "createdAt"
+        ]
+      },
+      "EventListMetaDto": {
+        "type": "object",
+        "properties": {
+          "hasMore": {
+            "type": "boolean"
+          },
+          "cursor": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "hasMore"
+        ]
+      },
+      "EventListResponseDto": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EventResponseDto"
+            }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/EventListMetaDto"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ]
+      },
+      "ChannelResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "channelId": {
+            "type": "string"
+          },
+          "orgId": {
+            "type": "string"
+          },
+          "appId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string"
+          },
+          "deletedAt": {
+            "type": "string"
+          },
+          "app": {
+            "$ref": "#/components/schemas/AppResponseDto"
+          }
+        },
+        "required": [
+          "id",
+          "channelId",
+          "orgId",
+          "appId",
+          "name",
+          "createdAt"
+        ]
+      },
+      "AppResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "appId": {
+            "type": "string"
+          },
+          "orgId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "creatorUserId": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string"
+          },
+          "deletedAt": {
+            "type": "string"
+          },
+          "channels": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ChannelResponseDto"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "appId",
+          "orgId",
+          "name",
+          "createdAt"
+        ]
+      },
+      "createChannelDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "appId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "appId"
+        ]
+      },
+      "CreateAppDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ]
       },
       "CreateApiKeyDto": {
         "type": "object",
@@ -3560,20 +5260,15 @@
           "id": {
             "type": "string"
           },
-          "apiKeyId": {
-            "type": "string"
-          },
-          "orgId": {
-            "type": "string"
-          },
-          "appId": {
-            "type": "string"
-          },
-          "environmentId": {
-            "type": "string"
-          },
           "name": {
             "type": "string"
+          },
+          "prefix": {
+            "type": "string"
+          },
+          "key": {
+            "type": "string",
+            "description": "Raw API key, only returned at creation time"
           },
           "scopes": {
             "type": "array",
@@ -3590,38 +5285,23 @@
               ]
             }
           },
+          "environmentId": {
+            "type": "string"
+          },
           "allowEnvironmentOverride": {
             "type": "boolean"
           },
-          "prefix": {
-            "type": "string"
-          },
-          "lastUsedAt": {
-            "type": "string"
-          },
           "createdAt": {
             "type": "string"
-          },
-          "updatedAt": {
-            "type": "string"
-          },
-          "revokedAt": {
-            "type": "string"
-          },
-          "key": {
-            "type": "string",
-            "description": "Raw API key, only returned at creation time"
           }
         },
         "required": [
           "id",
-          "apiKeyId",
-          "orgId",
           "name",
+          "key",
           "scopes",
           "allowEnvironmentOverride",
-          "createdAt",
-          "key"
+          "createdAt"
         ]
       },
       "ApiKeyResponseDto": {
@@ -3630,12 +5310,6 @@
           "id": {
             "type": "string"
           },
-          "apiKeyId": {
-            "type": "string"
-          },
-          "orgId": {
-            "type": "string"
-          },
           "appId": {
             "type": "string"
           },
@@ -3663,6 +5337,13 @@
           "allowEnvironmentOverride": {
             "type": "boolean"
           },
+          "purpose": {
+            "type": "string",
+            "enum": [
+              "general",
+              "ingest"
+            ]
+          },
           "prefix": {
             "type": "string"
           },
@@ -3671,18 +5352,10 @@
           },
           "createdAt": {
             "type": "string"
-          },
-          "updatedAt": {
-            "type": "string"
-          },
-          "revokedAt": {
-            "type": "string"
           }
         },
         "required": [
           "id",
-          "apiKeyId",
-          "orgId",
           "name",
           "scopes",
           "allowEnvironmentOverride",
@@ -3815,316 +5488,120 @@
           "createdAt"
         ]
       },
-      "ChannelResponseDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "channelId": {
-            "type": "string"
-          },
-          "orgId": {
-            "type": "string"
-          },
-          "appId": {
-            "type": "string"
-          },
-          "name": {
-            "type": "string"
-          },
-          "createdAt": {
-            "type": "string"
-          },
-          "updatedAt": {
-            "type": "string"
-          },
-          "deletedAt": {
-            "type": "string"
-          },
-          "app": {
-            "$ref": "#/components/schemas/AppResponseDto"
-          }
-        },
-        "required": [
-          "id",
-          "channelId",
-          "orgId",
-          "appId",
-          "name",
-          "createdAt"
-        ]
-      },
-      "AppResponseDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "appId": {
-            "type": "string"
-          },
-          "orgId": {
-            "type": "string"
-          },
-          "name": {
-            "type": "string"
-          },
-          "creatorUserId": {
-            "type": "string"
-          },
-          "createdAt": {
-            "type": "string"
-          },
-          "updatedAt": {
-            "type": "string"
-          },
-          "deletedAt": {
-            "type": "string"
-          },
-          "channels": {
-            "type": "array",
-            "items": {
-              "type": "array",
-              "items": {
-                "$ref": "#/components/schemas/ChannelResponseDto"
-              }
-            }
-          }
-        },
-        "required": [
-          "id",
-          "appId",
-          "orgId",
-          "name",
-          "createdAt",
-          "channels"
-        ]
-      },
-      "createChannelDto": {
+      "CreateMcpTokenDto": {
         "type": "object",
         "properties": {
           "name": {
-            "type": "string"
-          },
-          "appId": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "name",
-          "appId"
-        ]
-      },
-      "CreateEventDto": {
-        "type": "object",
-        "properties": {
-          "identifier": {
-            "type": "string"
-          },
-          "payload": {
-            "type": "object"
-          },
-          "channel_id": {
-            "type": "string"
-          },
-          "agentId": {
-            "type": "string"
-          },
-          "traceId": {
-            "type": "string"
-          },
-          "spanId": {
-            "type": "string"
-          },
-          "parentEventId": {
-            "type": "string"
-          },
-          "eventType": {
             "type": "string",
+            "maxLength": 80,
+            "example": "My coding agent"
+          },
+          "access": {
             "enum": [
-              "agent.start",
-              "agent.end",
-              "agent.message",
-              "agent.tool_call.start",
-              "agent.tool_call.end",
-              "agent.error",
-              "agent.handoff",
-              "agent.llm.token",
-              "agent.log",
-              "app.log",
-              "app.span",
-              "custom"
+              "debug",
+              "setup_debug"
             ],
-            "default": "custom"
-          },
-          "metadata": {
-            "type": "object"
-          },
-          "environment": {
-            "type": "string",
-            "description": "Environment slug override. Only honored when the API key has allowEnvironmentOverride=true."
-          },
-          "sync": {
-            "type": "boolean",
-            "default": false,
-            "description": "When true, wait for the event to be persisted to the DB before returning. Use only for audit-critical calls — the default async path returns in under a millisecond."
+            "type": "string"
           }
         },
         "required": [
-          "identifier",
-          "payload",
-          "channel_id"
+          "name",
+          "access"
         ]
       },
-      "EventIngestResponseDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "description": "Alias of eventId, populated by the global IdAliasInterceptor."
-          },
-          "eventId": {
-            "type": "string"
-          },
-          "identifier": {
-            "type": "string"
-          },
-          "dedupKey": {
-            "type": "string"
-          },
-          "createdAt": {
-            "type": "string"
-          },
-          "queued": {
-            "type": "boolean"
-          },
-          "duplicate": {
-            "type": "boolean"
-          },
-          "environmentId": {
-            "type": "string",
-            "nullable": true
-          }
-        },
-        "required": [
-          "id",
-          "eventId",
-          "identifier",
-          "dedupKey",
-          "createdAt",
-          "queued"
-        ]
-      },
-      "EventResponseDto": {
+      "McpTokenCreateResponseDto": {
         "type": "object",
         "properties": {
           "id": {
             "type": "string"
           },
-          "eventId": {
-            "type": "string"
-          },
-          "orgId": {
-            "type": "string"
-          },
-          "appId": {
-            "type": "string"
-          },
-          "channelId": {
-            "type": "string"
-          },
-          "environmentId": {
-            "type": "string"
-          },
-          "eventType": {
-            "type": "string"
-          },
-          "agentId": {
-            "type": "string"
-          },
-          "traceId": {
-            "type": "string"
-          },
-          "spanId": {
-            "type": "string"
-          },
-          "parentEventId": {
-            "type": "string"
-          },
-          "identifier": {
-            "type": "string"
-          },
-          "payload": {
-            "type": "object",
-            "additionalProperties": true
-          },
-          "metadata": {
-            "type": "object",
-            "additionalProperties": true
-          },
-          "createdAt": {
-            "type": "string"
-          },
-          "updatedAt": {
-            "type": "string"
-          },
-          "ttl": {
-            "type": "number"
-          }
-        },
-        "required": [
-          "id",
-          "eventId",
-          "orgId",
-          "appId",
-          "channelId",
-          "eventType",
-          "createdAt"
-        ]
-      },
-      "EventListMetaDto": {
-        "type": "object",
-        "properties": {
-          "hasMore": {
-            "type": "boolean"
-          },
-          "cursor": {
-            "type": "string",
-            "nullable": true
-          }
-        },
-        "required": [
-          "hasMore"
-        ]
-      },
-      "EventListResponseDto": {
-        "type": "object",
-        "properties": {
-          "data": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/EventResponseDto"
-            }
-          },
-          "meta": {
-            "$ref": "#/components/schemas/EventListMetaDto"
-          }
-        },
-        "required": [
-          "data",
-          "meta"
-        ]
-      },
-      "CreateAppDto": {
-        "type": "object",
-        "properties": {
           "name": {
             "type": "string"
+          },
+          "prefix": {
+            "type": "string"
+          },
+          "access": {
+            "enum": [
+              "debug",
+              "setup_debug"
+            ],
+            "type": "string"
+          },
+          "scopes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "expiresAt": {
+            "type": "string"
+          },
+          "lastUsedAt": {
+            "type": "string"
+          },
+          "token": {
+            "type": "string",
+            "description": "Raw MCP token, returned only once at creation time"
           }
         },
         "required": [
-          "name"
+          "id",
+          "name",
+          "prefix",
+          "access",
+          "scopes",
+          "createdAt",
+          "expiresAt",
+          "token"
+        ]
+      },
+      "McpTokenResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "prefix": {
+            "type": "string"
+          },
+          "access": {
+            "enum": [
+              "debug",
+              "setup_debug"
+            ],
+            "type": "string"
+          },
+          "scopes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "expiresAt": {
+            "type": "string"
+          },
+          "lastUsedAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "prefix",
+          "access",
+          "scopes",
+          "createdAt",
+          "expiresAt"
         ]
       },
       "CreateWebhookEndpointDto": {
@@ -4188,7 +5665,7 @@
           "description": {
             "type": "string"
           },
-          "isActive": {
+          "active": {
             "type": "boolean"
           },
           "createdAt": {
@@ -4215,7 +5692,7 @@
           "endpointId",
           "channelId",
           "url",
-          "isActive",
+          "active",
           "createdAt"
         ]
       },
@@ -4252,7 +5729,7 @@
           "description": {
             "type": "string"
           },
-          "isActive": {
+          "active": {
             "type": "boolean"
           },
           "createdAt": {
@@ -4270,7 +5747,7 @@
           "endpointId",
           "channelId",
           "url",
-          "isActive",
+          "active",
           "createdAt"
         ]
       },
@@ -4344,6 +5821,175 @@
           "status",
           "eventId"
         ]
+      },
+      "CreateExportDestinationDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "envSlug": {
+            "type": "string",
+            "description": "Environment slug this destination is scoped to (e.g. \"prod\")"
+          },
+          "endpointUrl": {
+            "type": "string",
+            "description": "OTLP/HTTP base URL (v1/logs and v1/traces are appended)"
+          },
+          "headers": {
+            "type": "object",
+            "description": "Header name -> value map (e.g. DD-API-KEY). Stored server-side, never returned.",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "signals": {
+            "type": "array",
+            "enum": [
+              "logs",
+              "traces"
+            ],
+            "items": {
+              "type": "string",
+              "enum": [
+                "logs",
+                "traces"
+              ]
+            }
+          },
+          "eventTypeFilter": {
+            "description": "Allow-list of event types to export (empty = all types)",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "serviceName": {
+            "type": "string",
+            "description": "service.name attribute stamped on exported resources"
+          },
+          "active": {
+            "type": "boolean",
+            "default": true
+          }
+        },
+        "required": [
+          "name",
+          "envSlug",
+          "endpointUrl",
+          "signals"
+        ]
+      },
+      "ExportDestinationResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "destinationId": {
+            "type": "string"
+          },
+          "orgId": {
+            "type": "string"
+          },
+          "envSlug": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "endpointUrl": {
+            "type": "string"
+          },
+          "signals": {
+            "description": "OTLP signals: logs and/or traces",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "eventTypeFilter": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "serviceName": {
+            "type": "string"
+          },
+          "headerKeys": {
+            "description": "Configured header names (values are masked)",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "active": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "destinationId",
+          "orgId",
+          "envSlug",
+          "name",
+          "endpointUrl",
+          "signals",
+          "headerKeys",
+          "active",
+          "createdAt"
+        ]
+      },
+      "UpdateExportDestinationDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "endpointUrl": {
+            "type": "string"
+          },
+          "headers": {
+            "type": "object",
+            "description": "Replaces the stored header map. Never returned by the API.",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "signals": {
+            "type": "array",
+            "enum": [
+              "logs",
+              "traces"
+            ],
+            "items": {
+              "type": "string",
+              "enum": [
+                "logs",
+                "traces"
+              ]
+            }
+          },
+          "eventTypeFilter": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "serviceName": {
+            "type": "string"
+          },
+          "active": {
+            "type": "boolean"
+          }
+        }
       },
       "AuditLogActorDto": {
         "type": "object",
@@ -4650,6 +6296,786 @@
         },
         "required": [
           "code"
+        ]
+      },
+      "AdminTotalsDto": {
+        "type": "object",
+        "properties": {
+          "orgs": {
+            "type": "number"
+          },
+          "users": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "orgs",
+          "users"
+        ]
+      },
+      "AdminEventsDto": {
+        "type": "object",
+        "properties": {
+          "total": {
+            "type": "number",
+            "description": "All-time events ingested (sum of per-org events_total counters)"
+          },
+          "today": {
+            "type": "number",
+            "description": "Events ingested today (UTC)"
+          },
+          "thisCycle": {
+            "type": "number",
+            "description": "Sum of every org’s events used in its current billing cycle"
+          }
+        },
+        "required": [
+          "total",
+          "today",
+          "thisCycle"
+        ]
+      },
+      "CountByKeyDto": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "description": "The grouped key, e.g. a plan or subscription status"
+          },
+          "count": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "key",
+          "count"
+        ]
+      },
+      "MrrByPlanDto": {
+        "type": "object",
+        "properties": {
+          "plan": {
+            "type": "string"
+          },
+          "count": {
+            "type": "number"
+          },
+          "mrrUsd": {
+            "type": "number",
+            "description": "Estimated monthly recurring revenue (USD) from this plan"
+          }
+        },
+        "required": [
+          "plan",
+          "count",
+          "mrrUsd"
+        ]
+      },
+      "AdminMrrDto": {
+        "type": "object",
+        "properties": {
+          "estimateUsd": {
+            "type": "number",
+            "description": "Approximate monthly recurring revenue (USD)"
+          },
+          "payingOrgs": {
+            "type": "number"
+          },
+          "byPlan": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MrrByPlanDto"
+            }
+          }
+        },
+        "required": [
+          "estimateUsd",
+          "payingOrgs",
+          "byPlan"
+        ]
+      },
+      "AdminOverviewDto": {
+        "type": "object",
+        "properties": {
+          "totals": {
+            "$ref": "#/components/schemas/AdminTotalsDto"
+          },
+          "events": {
+            "$ref": "#/components/schemas/AdminEventsDto"
+          },
+          "planDistribution": {
+            "description": "Org count grouped by plan",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CountByKeyDto"
+            }
+          },
+          "subscriptionStatusDistribution": {
+            "description": "Org count grouped by subscription status",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CountByKeyDto"
+            }
+          },
+          "mrr": {
+            "$ref": "#/components/schemas/AdminMrrDto"
+          }
+        },
+        "required": [
+          "totals",
+          "events",
+          "planDistribution",
+          "subscriptionStatusDistribution",
+          "mrr"
+        ]
+      },
+      "AdminRecentOrgDto": {
+        "type": "object",
+        "properties": {
+          "orgId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "plan": {
+            "type": "string"
+          },
+          "subscriptionStatus": {
+            "type": "string",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "orgId",
+          "name",
+          "slug",
+          "plan",
+          "subscriptionStatus",
+          "createdAt"
+        ]
+      },
+      "AdminRecentUserDto": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "organizationId": {
+            "type": "string",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "userId",
+          "email",
+          "organizationId",
+          "createdAt"
+        ]
+      },
+      "AdminSignupPointDto": {
+        "type": "object",
+        "properties": {
+          "day": {
+            "type": "string",
+            "description": "UTC day, YYYY-MM-DD"
+          },
+          "orgs": {
+            "type": "number"
+          },
+          "users": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "day",
+          "orgs",
+          "users"
+        ]
+      },
+      "AdminSignupsDto": {
+        "type": "object",
+        "properties": {
+          "recentOrgs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AdminRecentOrgDto"
+            }
+          },
+          "recentUsers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AdminRecentUserDto"
+            }
+          },
+          "series": {
+            "description": "Signups per UTC day",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AdminSignupPointDto"
+            }
+          }
+        },
+        "required": [
+          "recentOrgs",
+          "recentUsers",
+          "series"
+        ]
+      },
+      "AdminOrgListItemDto": {
+        "type": "object",
+        "properties": {
+          "orgId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "plan": {
+            "type": "string"
+          },
+          "subscriptionStatus": {
+            "type": "string",
+            "nullable": true
+          },
+          "eventsQuotaUsedCurrent": {
+            "type": "number",
+            "nullable": true
+          },
+          "eventsQuotaMonthly": {
+            "type": "number",
+            "nullable": true
+          },
+          "seatLimit": {
+            "type": "number",
+            "nullable": true
+          },
+          "billingMonthlyAmountUsd": {
+            "type": "number",
+            "nullable": true
+          },
+          "billingNotes": {
+            "type": "string",
+            "nullable": true
+          },
+          "trialEndsAt": {
+            "type": "string",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "orgId",
+          "name",
+          "slug",
+          "plan",
+          "subscriptionStatus",
+          "eventsQuotaUsedCurrent",
+          "eventsQuotaMonthly",
+          "seatLimit",
+          "billingMonthlyAmountUsd",
+          "billingNotes",
+          "trialEndsAt",
+          "createdAt"
+        ]
+      },
+      "AdminOrgListDto": {
+        "type": "object",
+        "properties": {
+          "total": {
+            "type": "number",
+            "description": "Number of orgs matching the query (before the response cap)"
+          },
+          "truncated": {
+            "type": "boolean",
+            "description": "True when results were capped and not all matches are returned"
+          },
+          "orgs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AdminOrgListItemDto"
+            }
+          }
+        },
+        "required": [
+          "total",
+          "truncated",
+          "orgs"
+        ]
+      },
+      "AdminCreateCustomerDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 120
+          },
+          "slug": {
+            "type": "string",
+            "maxLength": 80,
+            "pattern": "/^[a-z0-9]+(?:-[a-z0-9]+)*$/"
+          },
+          "ownerEmail": {
+            "type": "string"
+          },
+          "plan": {
+            "enum": [
+              "free",
+              "pro",
+              "team",
+              "scale",
+              "selfhost"
+            ],
+            "type": "string"
+          },
+          "trialDays": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 365
+          },
+          "billingMonthlyAmountUsd": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1000000
+          },
+          "billingNotes": {
+            "type": "string",
+            "maxLength": 2000
+          }
+        },
+        "required": [
+          "name",
+          "slug",
+          "ownerEmail",
+          "plan",
+          "trialDays",
+          "billingMonthlyAmountUsd"
+        ]
+      },
+      "AdminOrgInvitationDto": {
+        "type": "object",
+        "properties": {
+          "invitationId": {
+            "type": "string"
+          },
+          "invitedEmail": {
+            "type": "string"
+          },
+          "inviteRole": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "invitationId",
+          "invitedEmail",
+          "inviteRole",
+          "status",
+          "code",
+          "createdAt"
+        ]
+      },
+      "AdminCreateCustomerResponseDto": {
+        "type": "object",
+        "properties": {
+          "org": {
+            "$ref": "#/components/schemas/AdminOrgListItemDto"
+          },
+          "invitation": {
+            "$ref": "#/components/schemas/AdminOrgInvitationDto"
+          }
+        },
+        "required": [
+          "org",
+          "invitation"
+        ]
+      },
+      "AdminOrgLimitDto": {
+        "type": "object",
+        "properties": {
+          "planDefault": {
+            "type": "number",
+            "nullable": true,
+            "description": "Plan-derived default (null = unlimited)"
+          },
+          "override": {
+            "type": "number",
+            "nullable": true,
+            "description": "Raw durable override: a number, -1 for unlimited, or null when unset"
+          },
+          "effective": {
+            "type": "number",
+            "nullable": true,
+            "description": "Effective value in force (null = unlimited)"
+          }
+        },
+        "required": [
+          "planDefault",
+          "override",
+          "effective"
+        ]
+      },
+      "AdminOrgLimitsDto": {
+        "type": "object",
+        "properties": {
+          "seats": {
+            "$ref": "#/components/schemas/AdminOrgLimitDto"
+          },
+          "retentionDays": {
+            "$ref": "#/components/schemas/AdminOrgLimitDto"
+          },
+          "eventsQuotaMonthly": {
+            "$ref": "#/components/schemas/AdminOrgLimitDto"
+          }
+        },
+        "required": [
+          "seats",
+          "retentionDays",
+          "eventsQuotaMonthly"
+        ]
+      },
+      "AdminOrgMemberDto": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "roles": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "createdAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "userId",
+          "email",
+          "roles",
+          "createdAt"
+        ]
+      },
+      "AdminOrgDetailDto": {
+        "type": "object",
+        "properties": {
+          "org": {
+            "$ref": "#/components/schemas/AdminOrgListItemDto"
+          },
+          "limits": {
+            "description": "Per-limit plan default / override / effective",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/AdminOrgLimitsDto"
+              }
+            ]
+          },
+          "members": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AdminOrgMemberDto"
+            }
+          },
+          "invitations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AdminOrgInvitationDto"
+            }
+          }
+        },
+        "required": [
+          "org",
+          "limits",
+          "members",
+          "invitations"
+        ]
+      },
+      "AdminSetPlanDto": {
+        "type": "object",
+        "properties": {
+          "plan": {
+            "enum": [
+              "free",
+              "pro",
+              "team",
+              "scale",
+              "selfhost"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "plan"
+        ]
+      },
+      "AdminOrgMutationResponseDto": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "example": true
+          },
+          "subscriptionStatus": {
+            "type": "string",
+            "nullable": true
+          },
+          "plan": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "ok",
+          "subscriptionStatus",
+          "plan"
+        ]
+      },
+      "AdminSetLimitsDto": {
+        "type": "object",
+        "properties": {
+          "seatLimit": {
+            "type": "number",
+            "nullable": true,
+            "description": "Seat limit override: >=1 for a value, -1 for unlimited, null to clear"
+          },
+          "retentionDays": {
+            "type": "number",
+            "nullable": true,
+            "description": "Retention days override: >=1 for a value, -1 for unlimited, null to clear"
+          },
+          "eventsQuotaMonthly": {
+            "type": "number",
+            "nullable": true,
+            "description": "Monthly events quota override: >=0 for a value, -1 for unlimited, null to clear"
+          }
+        }
+      },
+      "AdminSetStatusDto": {
+        "type": "object",
+        "properties": {
+          "subscriptionStatus": {
+            "type": "string",
+            "enum": [
+              "active",
+              "past_due",
+              "paused",
+              "trialing",
+              "trial_expired"
+            ]
+          }
+        },
+        "required": [
+          "subscriptionStatus"
+        ]
+      },
+      "AdminSetTrialDto": {
+        "type": "object",
+        "properties": {
+          "days": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 365,
+            "description": "Trial length in days from now"
+          }
+        },
+        "required": [
+          "days"
+        ]
+      },
+      "AdminUpdateBillingDto": {
+        "type": "object",
+        "properties": {
+          "billingMonthlyAmountUsd": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1000000
+          },
+          "billingNotes": {
+            "type": "string",
+            "maxLength": 2000
+          }
+        },
+        "required": [
+          "billingMonthlyAmountUsd"
+        ]
+      },
+      "AdminUserListItemDto": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "firstName": {
+            "type": "string",
+            "nullable": true
+          },
+          "lastName": {
+            "type": "string",
+            "nullable": true
+          },
+          "organizationId": {
+            "type": "string",
+            "nullable": true
+          },
+          "disabledAt": {
+            "type": "string",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "trialStartedAt": {
+            "type": "string",
+            "nullable": true
+          },
+          "trialEndsAt": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "userId",
+          "email",
+          "firstName",
+          "lastName",
+          "organizationId",
+          "disabledAt",
+          "createdAt",
+          "trialStartedAt",
+          "trialEndsAt"
+        ]
+      },
+      "AdminUserListDto": {
+        "type": "object",
+        "properties": {
+          "total": {
+            "type": "number"
+          },
+          "truncated": {
+            "type": "boolean"
+          },
+          "users": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AdminUserListItemDto"
+            }
+          }
+        },
+        "required": [
+          "total",
+          "truncated",
+          "users"
+        ]
+      },
+      "AdminOkResponseDto": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "example": true
+          }
+        },
+        "required": [
+          "ok"
+        ]
+      },
+      "AdminBillingEventListItemDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "orgId": {
+            "type": "string"
+          },
+          "externalId": {
+            "type": "string"
+          },
+          "eventName": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "processedAt": {
+            "type": "string",
+            "nullable": true
+          },
+          "error": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "orgId",
+          "externalId",
+          "eventName",
+          "createdAt",
+          "processedAt",
+          "error"
+        ]
+      },
+      "AdminBillingEventListDto": {
+        "type": "object",
+        "properties": {
+          "events": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AdminBillingEventListItemDto"
+            }
+          }
+        },
+        "required": [
+          "events"
+        ]
+      },
+      "AdminBillingEventReplayResponseDto": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          },
+          "error": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "ok",
+          "error"
         ]
       }
     }

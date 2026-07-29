@@ -34,7 +34,7 @@ export { axonPushADKCallbacks } from "./google-adk.js";
 export { AxonPushCallbackHandler } from "./langchain.js";
 export { AxonPushLangGraphHandler } from "./langgraph.js";
 export { AxonPushLlamaIndexHandler } from "./llamaindex.js";
-export { AxonPushMastraHooks } from "./mastra.js";
+export { AxonPushMastraExporter, AxonPushMastraHooks } from "./mastra.js";
 export { AxonPushRunHooks } from "./openai-agents.js";
 export {
   AxonPushSpanExporter,

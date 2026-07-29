@@ -56,7 +56,7 @@ export { axonPushADKCallbacks } from "./integrations/google-adk";
 export { AxonPushCallbackHandler } from "./integrations/langchain";
 export { AxonPushLangGraphHandler } from "./integrations/langgraph";
 export { AxonPushLlamaIndexHandler } from "./integrations/llamaindex";
-export { AxonPushMastraHooks } from "./integrations/mastra";
+export { AxonPushMastraExporter, AxonPushMastraHooks } from "./integrations/mastra";
 export { AxonPushRunHooks } from "./integrations/openai-agents";
 export { AxonPushSpanExporter, type OtelExporterConfig } from "./integrations/otel";
 export {
@@ -115,3 +115,27 @@ export { TracesResource } from "./resources/traces";
 export { WebhooksResource } from "./resources/webhooks";
 export { currentTrace, getOrCreateTrace, TraceContext } from "./tracing";
 export { __version__ } from "./version";
+// Evaluation runner — customer code remains local and communicates through JSONL.
+export {
+  captureGitLineage,
+  EvaluationApiError,
+  EXIT_CODES,
+  HttpEvaluationApi,
+  runLocalEvaluation,
+  toGitHubSummary,
+  toJsonReport,
+  toJUnitXml,
+} from "./evaluation";
+export type {
+  CreateExperimentOptions,
+  DatasetItem,
+  EvaluationApi,
+  EvaluationItemResult,
+  EvaluationRunResult,
+  GateResult,
+  GateThresholds,
+  GitLineage,
+  LocalEvaluationInput,
+  LocalEvaluationOutput,
+  LocalRunnerOptions,
+} from "./evaluation";

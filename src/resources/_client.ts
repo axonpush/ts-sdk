@@ -30,6 +30,7 @@ export type GeneratedOp<T = unknown> = (args: any) => Promise<{ data?: T; [k: st
  */
 export interface ResourceClient {
   readonly environment: string | undefined;
+  redactTelemetry?<T>(value: T): T;
   getOrCreateTrace(seedTraceId?: string): TraceContextLike;
   invoke<T>(op: GeneratedOp<T>, args?: unknown): Promise<T | null>;
 }

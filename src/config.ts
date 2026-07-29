@@ -29,6 +29,12 @@ export interface AxonPushOptions {
    * of throwing. Useful in fire-and-forget telemetry paths. Default `false`.
    */
   failOpen?: boolean;
+  /** Content capture mode. Safe default is metadata-only. */
+  contentCaptureMode?: "metadata_only" | "redacted" | "full";
+  /** Additional key names to redact recursively. */
+  redactKeys?: string[];
+  /** Maximum captured string length. Default `4096`. */
+  maxContentLength?: number;
 }
 
 /**
@@ -48,6 +54,9 @@ export interface ResolvedSettings {
   timeout: number;
   maxRetries: number;
   failOpen: boolean;
+  contentCaptureMode: "metadata_only" | "redacted" | "full";
+  redactKeys: string[];
+  maxContentLength: number;
 }
 
 const DEFAULT_BASE_URL = "http://localhost:3000";
@@ -76,6 +85,11 @@ function envInt(name: string): number | undefined {
   return Number.isFinite(n) && n >= 0 ? n : undefined;
 }
 
+function envContentCaptureMode(): ResolvedSettings["contentCaptureMode"] | undefined {
+  const value = envString("AXONPUSH_CONTENT_CAPTURE");
+  return value === "metadata_only" || value === "redacted" || value === "full" ? value : undefined;
+}
+
 /**
  * Merge caller-supplied options with `AXONPUSH_*` environment variables and
  * documented defaults. Caller options always win when defined.
@@ -99,5 +113,14 @@ export function resolveSettings(options?: AxonPushOptions): ResolvedSettings {
     timeout: opts.timeout ?? envInt("AXONPUSH_TIMEOUT") ?? DEFAULT_TIMEOUT_MS,
     maxRetries: opts.maxRetries ?? envInt("AXONPUSH_MAX_RETRIES") ?? DEFAULT_MAX_RETRIES,
     failOpen: opts.failOpen ?? envBool("AXONPUSH_FAIL_OPEN") ?? false,
+    contentCaptureMode: opts.contentCaptureMode ?? envContentCaptureMode() ?? "metadata_only",
+    redactKeys:
+      opts.redactKeys ??
+      envString("AXONPUSH_REDACT_KEYS")
+        ?.split(",")
+        .map((key) => key.trim())
+        .filter(Boolean) ??
+      [],
+    maxContentLength: opts.maxContentLength ?? envInt("AXONPUSH_MAX_CONTENT_LENGTH") ?? 4_096,
   };
 }

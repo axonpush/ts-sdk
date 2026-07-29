@@ -5,6 +5,9 @@
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "module": "./dist/index.js",
+  "bin": {
+    "axonpush-eval": "./dist/cli.js"
+  },
   "exports": {
     ".": {
       "import": "./dist/index.js",
@@ -13,6 +16,10 @@
     "./integrations/*": {
       "import": "./dist/integrations/*.js",
       "types": "./dist/integrations/*.d.ts"
+    },
+    "./evaluation": {
+      "import": "./dist/evaluation/index.js",
+      "types": "./dist/evaluation/index.d.ts"
     }
   },
   "repository": {
@@ -21,8 +28,8 @@
   },
   "files": ["dist"],
   "scripts": {
-    "codegen": "curl -fsS http://localhost:3000/swagger/json | python3 -m json.tool > spec/openapi.json && bun run tools/patch-spec.ts spec/openapi.json && rm -rf src/_internal/api && bunx @hey-api/openapi-ts -f openapi-ts.config.ts && sed -i \"s|from '../transport.ts'|from '../transport.js'|\" src/_internal/api/client.gen.ts",
-    "build": "bun build ./src/index.ts --outdir ./dist --target node --format esm && tsc -p tsconfig.build.json",
+    "codegen": "curl -fsS http://localhost:3000/swagger/json | python3 -m json.tool > spec/openapi.json && bun run tools/patch-spec.ts spec/openapi.json && rm -rf src/_internal/api && bunx @hey-api/openapi-ts -f openapi-ts.config.ts && perl -pi -e \"s|from '../transport\\\\.ts'|from '../transport.js'|\" src/_internal/api/client.gen.ts",
+    "build": "bun build ./src/index.ts ./src/cli.ts --outdir ./dist --target node --format esm && tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit",
     "lint": "biome check src/ index.ts",
     "lint:fix": "biome check --write src/ index.ts",
@@ -38,6 +45,7 @@
   "devDependencies": {
     "@biomejs/biome": "^2.4.10",
     "@hey-api/openapi-ts": "^0.97.0",
+    "@mastra/core": "^1.54.0",
     "@types/bun": "latest",
     "@types/node": "^25.5.2",
     "@vitest/ui": "^4.1.4",
@@ -48,6 +56,7 @@
   "peerDependencies": {
     "@opentelemetry/api": "^1.7.0",
     "@opentelemetry/sdk-trace-base": "^1.18.0",
+    "@mastra/core": ">=1.16.0-0 <2.0.0-0",
     "bullmq": "^5",
     "pino": "^9.0.0",
     "typescript": "^5",
@@ -59,6 +68,9 @@
       "optional": true
     },
     "@opentelemetry/sdk-trace-base": {
+      "optional": true
+    },
+    "@mastra/core": {
       "optional": true
     },
     "bullmq": {
