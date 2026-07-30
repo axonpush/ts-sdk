@@ -25,12 +25,18 @@ export interface PublishParams {
   traceId?: string;
   /** Span ID. Auto-generated from the trace context when omitted. */
   spanId?: string;
+  /** Parent W3C span ID for hierarchy reconstruction. */
+  parentSpanId?: string;
   /** Parent event ID — used to model hand-offs. */
   parentEventId?: string;
   /** Discriminator. Defaults to `"custom"` when omitted. */
   eventType?: EventType;
   /** Free-form metadata. */
   metadata?: Record<string, unknown>;
+  /** Immutable prompt identifier, emitted as `gen_ai.prompt.id`. */
+  promptId?: string;
+  /** Immutable prompt version, emitted as `gen_ai.prompt.version`. */
+  promptVersionId?: string;
   /**
    * Environment slug override. Only honoured when the API key has
    * `allowEnvironmentOverride=true`. Falls through to the client's
@@ -64,6 +70,7 @@ export interface EventListParams {
 /** Search-specific filters (cross-channel). */
 export interface EventSearchParams extends EventListParams {
   source?: string;
+  query?: string;
   channelId?: string;
   appId?: string;
 }
@@ -87,9 +94,9 @@ export class EventsResource {
    */
   async publish(params: PublishParams): Promise<Event | null> {
     const trace = this.client.getOrCreateTrace(params.traceId);
-    const body: CreateEventDto = {
+    const body = {
       identifier: params.identifier,
-      payload: params.payload,
+      payload: this.client.redactTelemetry?.(params.payload) ?? params.payload,
       channel_id: params.channelId,
       traceId: trace.traceId,
       spanId: params.spanId ?? trace.nextSpanId(),
@@ -97,11 +104,30 @@ export class EventsResource {
       sync: params.sync ?? false,
       ...(params.agentId !== undefined ? { agentId: params.agentId } : {}),
       ...(params.parentEventId !== undefined ? { parentEventId: params.parentEventId } : {}),
-      ...(params.metadata !== undefined ? { metadata: params.metadata } : {}),
+      ...(params.parentSpanId !== undefined ? { parentSpanId: params.parentSpanId } : {}),
+      ...(params.metadata !== undefined ||
+      params.promptId !== undefined ||
+      params.promptVersionId !== undefined
+        ? {
+            metadata: this.client.redactTelemetry?.({
+              ...(params.metadata ?? {}),
+              ...(params.promptId === undefined ? {} : { "gen_ai.prompt.id": params.promptId }),
+              ...(params.promptVersionId === undefined
+                ? {}
+                : { "gen_ai.prompt.version": params.promptVersionId }),
+            }) ?? {
+              ...(params.metadata ?? {}),
+              ...(params.promptId === undefined ? {} : { "gen_ai.prompt.id": params.promptId }),
+              ...(params.promptVersionId === undefined
+                ? {}
+                : { "gen_ai.prompt.version": params.promptVersionId }),
+            },
+          }
+        : {}),
       ...((params.environment ?? this.client.environment)
         ? { environment: params.environment ?? this.client.environment }
         : {}),
-    };
+    } as CreateEventDto;
     return this.client.invoke(eventControllerCreateEvent, { body });
   }
 
@@ -155,6 +181,7 @@ export class EventsResource {
     const env = p.environment ?? this.client.environment;
     return {
       ...(p.source !== undefined ? { source: p.source } : {}),
+      ...(p.query !== undefined ? { query: p.query } : {}),
       ...(p.channelId !== undefined ? { channelId: p.channelId } : {}),
       ...(p.appId !== undefined ? { appId: p.appId } : {}),
       ...(p.payloadFilter !== undefined ? { payloadFilter: p.payloadFilter } : {}),

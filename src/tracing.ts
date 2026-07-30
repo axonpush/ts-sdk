@@ -1,8 +1,8 @@
 import { AsyncLocalStorage } from "node:async_hooks";
+import { createHash, randomBytes } from "node:crypto";
 
 /**
- * Per-async-flow trace context. `traceId` is a UUID; child spans are issued
- * via {@link TraceContext.nextSpanId} which returns a fresh UUID per call.
+ * Per-async-flow trace context using W3C-compatible trace and span ids.
  */
 export class TraceContext {
   /** Stable trace identifier propagated as `X-Axonpush-Trace-Id`. */
@@ -13,7 +13,7 @@ export class TraceContext {
    *   generated. Useful for stitching together upstream and downstream traces.
    */
   constructor(traceId?: string) {
-    this.traceId = traceId ?? crypto.randomUUID();
+    this.traceId = traceId ?? randomBytes(16).toString("hex");
   }
 
   /**
@@ -22,7 +22,19 @@ export class TraceContext {
    * @returns A UUID identifying a single logical operation under {@link traceId}.
    */
   nextSpanId(): string {
-    return crypto.randomUUID();
+    return randomBytes(8).toString("hex");
+  }
+
+  /** Return a W3C-compatible 32-hex trace id for HTTP propagation. */
+  w3cTraceId(): string {
+    const compact = this.traceId.replaceAll("-", "").toLowerCase();
+    if (/^[0-9a-f]{32}$/.test(compact) && !/^0+$/.test(compact)) return compact;
+    return createHash("sha256").update(this.traceId).digest("hex").slice(0, 32);
+  }
+
+  /** Create a W3C `traceparent` header with a fresh child span id. */
+  traceparent(spanId = this.nextSpanId()): string {
+    return `00-${this.w3cTraceId()}-${spanId}-01`;
   }
 }
 

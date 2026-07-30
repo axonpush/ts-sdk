@@ -2,7 +2,7 @@
 
 import type { Client, Options as Options2, TDataShape } from './client';
 import { client } from './client.gen';
-import type { ApiKeyControllerCreateApiKeyData, ApiKeyControllerCreateApiKeyResponses, ApiKeyControllerListApiKeysData, ApiKeyControllerListApiKeysResponses, ApiKeyControllerRevokeApiKeyData, ApiKeyControllerRevokeApiKeyResponses, AppControllerGetHelloData, AppControllerGetHelloResponses, AppsControllerCreateAppData, AppsControllerCreateAppResponses, AppsControllerDeleteAppData, AppsControllerDeleteAppResponses, AppsControllerEditAppData, AppsControllerEditAppResponses, AppsControllerGetAllAppsData, AppsControllerGetAllAppsResponses, AppsControllerGetAppData, AppsControllerGetAppResponses, AuditLogControllerListAuditLogsData, AuditLogControllerListAuditLogsResponses, AuthControllerGoogleAuthData, AuthControllerGoogleAuthResponses, AuthControllerRefreshData, AuthControllerRefreshResponses, AuthControllerSetupOrgData, AuthControllerSetupOrgResponses, AuthControllerSignInData, AuthControllerSignInResponses, AuthControllerSignUpData, AuthControllerSignUpResponses, ChannelControllerCreateChannelData, ChannelControllerCreateChannelResponses, ChannelControllerDeleteChannelData, ChannelControllerDeleteChannelResponses, ChannelControllerGetChannelData, ChannelControllerGetChannelResponses, ChannelControllerListChannelsData, ChannelControllerListChannelsResponses, ChannelControllerUpdateChannelData, ChannelControllerUpdateChannelResponses, EnvironmentControllerCreateData, EnvironmentControllerCreateResponses, EnvironmentControllerListData, EnvironmentControllerListResponses, EnvironmentControllerPromoteData, EnvironmentControllerPromoteResponses, EnvironmentControllerRemoveData, EnvironmentControllerRemoveResponses, EnvironmentControllerUpdateData, EnvironmentControllerUpdateResponses, EventControllerCreateEventData, EventControllerCreateEventResponses, EventControllerListEventsData, EventControllerListEventsResponses, EventsSearchControllerSearchData, EventsSearchControllerSearchResponses, FeatureFlagsControllerMeData, FeatureFlagsControllerMeResponses, HealthControllerCheckData, HealthControllerCheckResponses, IotCredentialsControllerGetCredentialsData, IotCredentialsControllerGetCredentialsResponses, OrganizationControllerCreateInvitationData, OrganizationControllerCreateInvitationResponses, OrganizationControllerCreateOrganizationData, OrganizationControllerCreateOrganizationResponses, OrganizationControllerDeleteInvitationData, OrganizationControllerDeleteInvitationResponses, OrganizationControllerDeleteOrganizationData, OrganizationControllerDeleteOrganizationResponses, OrganizationControllerEditOrganizationData, OrganizationControllerEditOrganizationResponses, OrganizationControllerGetAllOrganizationsData, OrganizationControllerGetAllOrganizationsResponses, OrganizationControllerGetOrganizationData, OrganizationControllerGetOrganizationResponses, OrganizationControllerRemoveMemberData, OrganizationControllerRemoveMemberResponses, OrganizationControllerTransferOwnershipData, OrganizationControllerTransferOwnershipResponses, OtlpControllerIngestLogsData, OtlpControllerIngestLogsResponses, OtlpControllerIngestTracesData, OtlpControllerIngestTracesResponses, PublicIngestTokenControllerCreateData, PublicIngestTokenControllerCreateResponses, PublicIngestTokenControllerListData, PublicIngestTokenControllerListResponses, PublicIngestTokenControllerRevokeData, PublicIngestTokenControllerRevokeResponses, ReleaseControllerCreateData, ReleaseControllerCreateResponses, ReleaseControllerListData, ReleaseControllerListResponses, ReleaseControllerUploadArtifactData, ReleaseControllerUploadArtifactResponses, SentryControllerIngestEnvelopeData, SentryControllerIngestEnvelopeResponses, SentryControllerIngestMinidumpData, SentryControllerIngestMinidumpResponses, SentryControllerIngestSecurityData, SentryControllerIngestSecurityResponses, SentryControllerIngestStoreData, SentryControllerIngestStoreResponses, SsoControllerAuthorizeData, SsoControllerAuthorizeResponses, SsoControllerCallbackData, SsoControllerCallbackResponses, SsoControllerCreateConnectionData, SsoControllerCreateConnectionResponses, SsoControllerDeleteConnectionData, SsoControllerDeleteConnectionResponses, SsoControllerGetConnectionsData, SsoControllerGetConnectionsResponses, SsoControllerSamlAcsData, SsoControllerSamlAcsResponses, SsoControllerToggleEnforcementData, SsoControllerToggleEnforcementResponses, TraceControllerGetDashboardStatsData, TraceControllerGetDashboardStatsResponses, TraceControllerGetTraceEventsData, TraceControllerGetTraceEventsResponses, TraceControllerGetTraceSummaryData, TraceControllerGetTraceSummaryResponses, TraceControllerListTracesData, TraceControllerListTracesResponses, UserControllerDeleteUserData, UserControllerDeleteUserResponses, UserControllerGetMeData, UserControllerGetMeResponses, UserControllerGetMyOrganizationsData, UserControllerGetMyOrganizationsResponses, UserControllerGetUsersData, UserControllerGetUsersResponses, UserControllerSwitchActiveOrgData, UserControllerSwitchActiveOrgResponses, UserControllerUpdateMeData, UserControllerUpdateMeResponses, UserControllerUpdateUserData, UserControllerUpdateUserResponses, WebhookControllerCreateEndpointData, WebhookControllerCreateEndpointResponses, WebhookControllerDeleteEndpointData, WebhookControllerDeleteEndpointResponses, WebhookControllerGetDeliveriesData, WebhookControllerGetDeliveriesResponses, WebhookControllerIngestWebhookData, WebhookControllerIngestWebhookResponses, WebhookControllerListEndpointsData, WebhookControllerListEndpointsResponses } from './types.gen';
+import type { AdminControllerCreateCustomerData, AdminControllerCreateCustomerResponses, AdminControllerDisableOrgData, AdminControllerDisableOrgResponses, AdminControllerDisableUserData, AdminControllerDisableUserResponses, AdminControllerEnableOrgData, AdminControllerEnableOrgResponses, AdminControllerEnableUserData, AdminControllerEnableUserResponses, AdminControllerGetOrgData, AdminControllerGetOrgResponses, AdminControllerGetOrgsData, AdminControllerGetOrgsResponses, AdminControllerGetOverviewData, AdminControllerGetOverviewResponses, AdminControllerGetSignupsData, AdminControllerGetSignupsResponses, AdminControllerGetUsersData, AdminControllerGetUsersResponses, AdminControllerListBillingEventsData, AdminControllerListBillingEventsResponses, AdminControllerReplayBillingEventData, AdminControllerReplayBillingEventResponses, AdminControllerSetOrgBillingData, AdminControllerSetOrgBillingResponses, AdminControllerSetOrgLimitsData, AdminControllerSetOrgLimitsResponses, AdminControllerSetOrgPlanData, AdminControllerSetOrgPlanResponses, AdminControllerSetOrgStatusData, AdminControllerSetOrgStatusResponses, AdminControllerSetOrgTrialData, AdminControllerSetOrgTrialResponses, ApiKeyControllerCreateApiKeyData, ApiKeyControllerCreateApiKeyResponses, ApiKeyControllerListApiKeysData, ApiKeyControllerListApiKeysResponses, ApiKeyControllerRevokeApiKeyData, ApiKeyControllerRevokeApiKeyResponses, AppControllerGetHelloData, AppControllerGetHelloResponses, AppsControllerCreateAppData, AppsControllerCreateAppResponses, AppsControllerDeleteAppData, AppsControllerDeleteAppResponses, AppsControllerEditAppData, AppsControllerEditAppResponses, AppsControllerGetAllAppsData, AppsControllerGetAllAppsResponses, AppsControllerGetAppData, AppsControllerGetAppResponses, AuditLogControllerListAuditLogsData, AuditLogControllerListAuditLogsResponses, AuthControllerGoogleAuthData, AuthControllerGoogleAuthResponses, AuthControllerRefreshData, AuthControllerRefreshResponses, AuthControllerSetupOrgData, AuthControllerSetupOrgResponses, AuthControllerSignInData, AuthControllerSignInResponses, AuthControllerSignUpData, AuthControllerSignUpResponses, BillingControllerCreateCheckoutData, BillingControllerCreateCheckoutResponses, BillingControllerGetPlansData, BillingControllerGetPlansResponses, BillingControllerGetPortalData, BillingControllerGetPortalResponses, BillingControllerGetUsageData, BillingControllerGetUsageResponses, BillingControllerHandleWebhookData, BillingControllerHandleWebhookResponses, CapabilitiesControllerGetCapabilitiesData, CapabilitiesControllerGetCapabilitiesResponses, ChannelControllerCreateChannelData, ChannelControllerCreateChannelResponses, ChannelControllerDeleteChannelData, ChannelControllerDeleteChannelResponses, ChannelControllerGetChannelData, ChannelControllerGetChannelResponses, ChannelControllerListChannelsData, ChannelControllerListChannelsResponses, ChannelControllerUpdateChannelData, ChannelControllerUpdateChannelResponses, EnvironmentControllerCreateData, EnvironmentControllerCreateResponses, EnvironmentControllerListData, EnvironmentControllerListResponses, EnvironmentControllerPromoteData, EnvironmentControllerPromoteResponses, EnvironmentControllerRemoveData, EnvironmentControllerRemoveResponses, EnvironmentControllerUpdateData, EnvironmentControllerUpdateResponses, EventControllerCreateEventData, EventControllerCreateEventResponses, EventControllerListEventsData, EventControllerListEventsResponses, EventsSearchControllerSearchData, EventsSearchControllerSearchResponses, ExportControllerCreateData, ExportControllerCreateResponses, ExportControllerGetData, ExportControllerGetResponses, ExportControllerListData, ExportControllerListResponses, ExportControllerRemoveData, ExportControllerRemoveResponses, ExportControllerUpdateData, ExportControllerUpdateResponses, FeatureFlagsControllerMeData, FeatureFlagsControllerMeResponses, HealthControllerCheckData, HealthControllerCheckResponses, IotCredentialsControllerGetCredentialsData, IotCredentialsControllerGetCredentialsResponses, McpControllerHandleData, McpControllerHandleResponses, McpTokenControllerCreateData, McpTokenControllerCreateResponses, McpTokenControllerListData, McpTokenControllerListResponses, McpTokenControllerRevokeData, McpTokenControllerRevokeResponses, OrganizationControllerCreateInvitationData, OrganizationControllerCreateInvitationResponses, OrganizationControllerCreateOrganizationData, OrganizationControllerCreateOrganizationResponses, OrganizationControllerDeleteInvitationData, OrganizationControllerDeleteInvitationResponses, OrganizationControllerDeleteOrganizationData, OrganizationControllerDeleteOrganizationResponses, OrganizationControllerEditOrganizationData, OrganizationControllerEditOrganizationResponses, OrganizationControllerGetAllOrganizationsData, OrganizationControllerGetAllOrganizationsResponses, OrganizationControllerGetOrganizationData, OrganizationControllerGetOrganizationResponses, OrganizationControllerGetTelemetryPolicyData, OrganizationControllerGetTelemetryPolicyResponses, OrganizationControllerRemoveMemberData, OrganizationControllerRemoveMemberResponses, OrganizationControllerTransferOwnershipData, OrganizationControllerTransferOwnershipResponses, OrganizationControllerUpdateTelemetryPolicyData, OrganizationControllerUpdateTelemetryPolicyResponses, OtlpControllerIngestLogsData, OtlpControllerIngestLogsResponses, OtlpControllerIngestTracesData, OtlpControllerIngestTracesResponses, PublicIngestTokenControllerCreateData, PublicIngestTokenControllerCreateResponses, PublicIngestTokenControllerListData, PublicIngestTokenControllerListResponses, PublicIngestTokenControllerRevokeData, PublicIngestTokenControllerRevokeResponses, ReleaseControllerCreateData, ReleaseControllerCreateResponses, ReleaseControllerListData, ReleaseControllerListResponses, ReleaseControllerUploadArtifactData, ReleaseControllerUploadArtifactResponses, SentryControllerIngestEnvelopeData, SentryControllerIngestEnvelopeResponses, SentryControllerIngestMinidumpData, SentryControllerIngestMinidumpResponses, SentryControllerIngestSecurityData, SentryControllerIngestSecurityResponses, SentryControllerIngestStoreData, SentryControllerIngestStoreResponses, SsoControllerAuthorizeData, SsoControllerAuthorizeResponses, SsoControllerCallbackData, SsoControllerCallbackResponses, SsoControllerCreateConnectionData, SsoControllerCreateConnectionResponses, SsoControllerDeleteConnectionData, SsoControllerDeleteConnectionResponses, SsoControllerGetConnectionsData, SsoControllerGetConnectionsResponses, SsoControllerSamlAcsData, SsoControllerSamlAcsResponses, SsoControllerToggleEnforcementData, SsoControllerToggleEnforcementResponses, TraceControllerGetDashboardStatsData, TraceControllerGetDashboardStatsResponses, TraceControllerGetTraceEventsData, TraceControllerGetTraceEventsResponses, TraceControllerGetTraceSummaryData, TraceControllerGetTraceSummaryResponses, TraceControllerListTracesData, TraceControllerListTracesResponses, UserControllerDeleteUserData, UserControllerDeleteUserResponses, UserControllerGetMeData, UserControllerGetMeResponses, UserControllerGetMyOrganizationsData, UserControllerGetMyOrganizationsResponses, UserControllerGetUsersData, UserControllerGetUsersResponses, UserControllerSwitchActiveOrgData, UserControllerSwitchActiveOrgResponses, UserControllerUpdateMeData, UserControllerUpdateMeResponses, UserControllerUpdateUserData, UserControllerUpdateUserResponses, WebhookControllerCreateEndpointData, WebhookControllerCreateEndpointResponses, WebhookControllerDeleteEndpointData, WebhookControllerDeleteEndpointResponses, WebhookControllerGetDeliveriesData, WebhookControllerGetDeliveriesResponses, WebhookControllerIngestWebhookData, WebhookControllerIngestWebhookResponses, WebhookControllerListEndpointsData, WebhookControllerListEndpointsResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -126,6 +126,10 @@ export const organizationControllerEditOrganization = <ThrowOnError extends bool
     }
 });
 
+export const organizationControllerGetTelemetryPolicy = <ThrowOnError extends boolean = false>(options: Options<OrganizationControllerGetTelemetryPolicyData, ThrowOnError>) => (options.client ?? client).get<OrganizationControllerGetTelemetryPolicyResponses, unknown, ThrowOnError>({ url: '/organizations/{id}/telemetry-policy', ...options });
+
+export const organizationControllerUpdateTelemetryPolicy = <ThrowOnError extends boolean = false>(options: Options<OrganizationControllerUpdateTelemetryPolicyData, ThrowOnError>) => (options.client ?? client).patch<OrganizationControllerUpdateTelemetryPolicyResponses, unknown, ThrowOnError>({ url: '/organizations/{id}/telemetry-policy', ...options });
+
 export const organizationControllerCreateInvitation = <ThrowOnError extends boolean = false>(options: Options<OrganizationControllerCreateInvitationData, ThrowOnError>) => (options.client ?? client).post<OrganizationControllerCreateInvitationResponses, unknown, ThrowOnError>({
     url: '/organizations/{id}/invitations',
     ...options,
@@ -148,7 +152,26 @@ export const organizationControllerTransferOwnership = <ThrowOnError extends boo
 
 export const organizationControllerDeleteInvitation = <ThrowOnError extends boolean = false>(options: Options<OrganizationControllerDeleteInvitationData, ThrowOnError>) => (options.client ?? client).delete<OrganizationControllerDeleteInvitationResponses, unknown, ThrowOnError>({ url: '/organizations/{id}/invitations/{invitationId}', ...options });
 
+export const billingControllerGetPlans = <ThrowOnError extends boolean = false>(options?: Options<BillingControllerGetPlansData, ThrowOnError>) => (options?.client ?? client).get<BillingControllerGetPlansResponses, unknown, ThrowOnError>({ url: '/billing/plans', ...options });
+
+export const billingControllerGetUsage = <ThrowOnError extends boolean = false>(options?: Options<BillingControllerGetUsageData, ThrowOnError>) => (options?.client ?? client).get<BillingControllerGetUsageResponses, unknown, ThrowOnError>({ url: '/billing/usage', ...options });
+
+export const billingControllerCreateCheckout = <ThrowOnError extends boolean = false>(options: Options<BillingControllerCreateCheckoutData, ThrowOnError>) => (options.client ?? client).post<BillingControllerCreateCheckoutResponses, unknown, ThrowOnError>({
+    url: '/billing/checkout',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+export const billingControllerGetPortal = <ThrowOnError extends boolean = false>(options?: Options<BillingControllerGetPortalData, ThrowOnError>) => (options?.client ?? client).get<BillingControllerGetPortalResponses, unknown, ThrowOnError>({ url: '/billing/portal', ...options });
+
+export const billingControllerHandleWebhook = <ThrowOnError extends boolean = false>(options?: Options<BillingControllerHandleWebhookData, ThrowOnError>) => (options?.client ?? client).post<BillingControllerHandleWebhookResponses, unknown, ThrowOnError>({ url: '/billing/webhook', ...options });
+
 export const featureFlagsControllerMe = <ThrowOnError extends boolean = false>(options?: Options<FeatureFlagsControllerMeData, ThrowOnError>) => (options?.client ?? client).get<FeatureFlagsControllerMeResponses, unknown, ThrowOnError>({ url: '/feature-flags/me', ...options });
+
+export const capabilitiesControllerGetCapabilities = <ThrowOnError extends boolean = false>(options?: Options<CapabilitiesControllerGetCapabilitiesData, ThrowOnError>) => (options?.client ?? client).get<CapabilitiesControllerGetCapabilitiesResponses, unknown, ThrowOnError>({ url: '/capabilities', ...options });
 
 export const environmentControllerList = <ThrowOnError extends boolean = false>(options?: Options<EnvironmentControllerListData, ThrowOnError>) => (options?.client ?? client).get<EnvironmentControllerListResponses, unknown, ThrowOnError>({ url: '/environments', ...options });
 
@@ -173,6 +196,60 @@ export const environmentControllerUpdate = <ThrowOnError extends boolean = false
 });
 
 export const environmentControllerPromote = <ThrowOnError extends boolean = false>(options: Options<EnvironmentControllerPromoteData, ThrowOnError>) => (options.client ?? client).post<EnvironmentControllerPromoteResponses, unknown, ThrowOnError>({ url: '/environments/{id}/promote-to-default', ...options });
+
+export const eventControllerCreateEvent = <ThrowOnError extends boolean = false>(options: Options<EventControllerCreateEventData, ThrowOnError>) => (options.client ?? client).post<EventControllerCreateEventResponses, unknown, ThrowOnError>({
+    url: '/event',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+export const eventControllerListEvents = <ThrowOnError extends boolean = false>(options: Options<EventControllerListEventsData, ThrowOnError>) => (options.client ?? client).get<EventControllerListEventsResponses, unknown, ThrowOnError>({ url: '/event/{channelId}/list', ...options });
+
+export const eventsSearchControllerSearch = <ThrowOnError extends boolean = false>(options?: Options<EventsSearchControllerSearchData, ThrowOnError>) => (options?.client ?? client).get<EventsSearchControllerSearchResponses, unknown, ThrowOnError>({ url: '/events/search', ...options });
+
+export const channelControllerListChannels = <ThrowOnError extends boolean = false>(options: Options<ChannelControllerListChannelsData, ThrowOnError>) => (options.client ?? client).get<ChannelControllerListChannelsResponses, unknown, ThrowOnError>({ url: '/channel', ...options });
+
+export const channelControllerCreateChannel = <ThrowOnError extends boolean = false>(options: Options<ChannelControllerCreateChannelData, ThrowOnError>) => (options.client ?? client).post<ChannelControllerCreateChannelResponses, unknown, ThrowOnError>({
+    url: '/channel',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+export const channelControllerDeleteChannel = <ThrowOnError extends boolean = false>(options: Options<ChannelControllerDeleteChannelData, ThrowOnError>) => (options.client ?? client).delete<ChannelControllerDeleteChannelResponses, unknown, ThrowOnError>({ url: '/channel/{id}', ...options });
+
+export const channelControllerGetChannel = <ThrowOnError extends boolean = false>(options: Options<ChannelControllerGetChannelData, ThrowOnError>) => (options.client ?? client).get<ChannelControllerGetChannelResponses, unknown, ThrowOnError>({ url: '/channel/{id}', ...options });
+
+export const channelControllerUpdateChannel = <ThrowOnError extends boolean = false>(options: Options<ChannelControllerUpdateChannelData, ThrowOnError>) => (options.client ?? client).put<ChannelControllerUpdateChannelResponses, unknown, ThrowOnError>({ url: '/channel/{id}', ...options });
+
+export const appsControllerGetAllApps = <ThrowOnError extends boolean = false>(options?: Options<AppsControllerGetAllAppsData, ThrowOnError>) => (options?.client ?? client).get<AppsControllerGetAllAppsResponses, unknown, ThrowOnError>({ url: '/apps', ...options });
+
+export const appsControllerCreateApp = <ThrowOnError extends boolean = false>(options: Options<AppsControllerCreateAppData, ThrowOnError>) => (options.client ?? client).post<AppsControllerCreateAppResponses, unknown, ThrowOnError>({
+    url: '/apps',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+export const appsControllerDeleteApp = <ThrowOnError extends boolean = false>(options: Options<AppsControllerDeleteAppData, ThrowOnError>) => (options.client ?? client).delete<AppsControllerDeleteAppResponses, unknown, ThrowOnError>({ url: '/apps/{id}', ...options });
+
+export const appsControllerGetApp = <ThrowOnError extends boolean = false>(options: Options<AppsControllerGetAppData, ThrowOnError>) => (options.client ?? client).get<AppsControllerGetAppResponses, unknown, ThrowOnError>({ url: '/apps/{id}', ...options });
+
+export const appsControllerEditApp = <ThrowOnError extends boolean = false>(options: Options<AppsControllerEditAppData, ThrowOnError>) => (options.client ?? client).patch<AppsControllerEditAppResponses, unknown, ThrowOnError>({
+    url: '/apps/{id}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
 
 export const apiKeyControllerListApiKeys = <ThrowOnError extends boolean = false>(options?: Options<ApiKeyControllerListApiKeysData, ThrowOnError>) => (options?.client ?? client).get<ApiKeyControllerListApiKeysResponses, unknown, ThrowOnError>({ url: '/api-keys', ...options });
 
@@ -200,10 +277,12 @@ export const publicIngestTokenControllerCreate = <ThrowOnError extends boolean =
 
 export const publicIngestTokenControllerRevoke = <ThrowOnError extends boolean = false>(options: Options<PublicIngestTokenControllerRevokeData, ThrowOnError>) => (options.client ?? client).delete<PublicIngestTokenControllerRevokeResponses, unknown, ThrowOnError>({ url: '/public-tokens/{id}', ...options });
 
-export const channelControllerListChannels = <ThrowOnError extends boolean = false>(options: Options<ChannelControllerListChannelsData, ThrowOnError>) => (options.client ?? client).get<ChannelControllerListChannelsResponses, unknown, ThrowOnError>({ url: '/channel', ...options });
+export const mcpControllerHandle = <ThrowOnError extends boolean = false>(options?: Options<McpControllerHandleData, ThrowOnError>) => (options?.client ?? client).post<McpControllerHandleResponses, unknown, ThrowOnError>({ url: '/mcp', ...options });
 
-export const channelControllerCreateChannel = <ThrowOnError extends boolean = false>(options: Options<ChannelControllerCreateChannelData, ThrowOnError>) => (options.client ?? client).post<ChannelControllerCreateChannelResponses, unknown, ThrowOnError>({
-    url: '/channel',
+export const mcpTokenControllerList = <ThrowOnError extends boolean = false>(options?: Options<McpTokenControllerListData, ThrowOnError>) => (options?.client ?? client).get<McpTokenControllerListResponses, unknown, ThrowOnError>({ url: '/users/me/mcp-tokens', ...options });
+
+export const mcpTokenControllerCreate = <ThrowOnError extends boolean = false>(options: Options<McpTokenControllerCreateData, ThrowOnError>) => (options.client ?? client).post<McpTokenControllerCreateResponses, unknown, ThrowOnError>({
+    url: '/users/me/mcp-tokens',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -211,48 +290,15 @@ export const channelControllerCreateChannel = <ThrowOnError extends boolean = fa
     }
 });
 
-export const channelControllerDeleteChannel = <ThrowOnError extends boolean = false>(options: Options<ChannelControllerDeleteChannelData, ThrowOnError>) => (options.client ?? client).delete<ChannelControllerDeleteChannelResponses, unknown, ThrowOnError>({ url: '/channel/{id}', ...options });
+export const mcpTokenControllerRevoke = <ThrowOnError extends boolean = false>(options: Options<McpTokenControllerRevokeData, ThrowOnError>) => (options.client ?? client).delete<McpTokenControllerRevokeResponses, unknown, ThrowOnError>({ url: '/users/me/mcp-tokens/{id}', ...options });
 
-export const channelControllerGetChannel = <ThrowOnError extends boolean = false>(options: Options<ChannelControllerGetChannelData, ThrowOnError>) => (options.client ?? client).get<ChannelControllerGetChannelResponses, unknown, ThrowOnError>({ url: '/channel/{id}', ...options });
+export const traceControllerListTraces = <ThrowOnError extends boolean = false>(options?: Options<TraceControllerListTracesData, ThrowOnError>) => (options?.client ?? client).get<TraceControllerListTracesResponses, unknown, ThrowOnError>({ url: '/traces', ...options });
 
-export const channelControllerUpdateChannel = <ThrowOnError extends boolean = false>(options: Options<ChannelControllerUpdateChannelData, ThrowOnError>) => (options.client ?? client).put<ChannelControllerUpdateChannelResponses, unknown, ThrowOnError>({ url: '/channel/{id}', ...options });
+export const traceControllerGetDashboardStats = <ThrowOnError extends boolean = false>(options?: Options<TraceControllerGetDashboardStatsData, ThrowOnError>) => (options?.client ?? client).get<TraceControllerGetDashboardStatsResponses, unknown, ThrowOnError>({ url: '/traces/stats', ...options });
 
-export const eventControllerCreateEvent = <ThrowOnError extends boolean = false>(options: Options<EventControllerCreateEventData, ThrowOnError>) => (options.client ?? client).post<EventControllerCreateEventResponses, unknown, ThrowOnError>({
-    url: '/event',
-    ...options,
-    headers: {
-        'Content-Type': 'application/json',
-        ...options.headers
-    }
-});
+export const traceControllerGetTraceEvents = <ThrowOnError extends boolean = false>(options: Options<TraceControllerGetTraceEventsData, ThrowOnError>) => (options.client ?? client).get<TraceControllerGetTraceEventsResponses, unknown, ThrowOnError>({ url: '/traces/{traceId}/events', ...options });
 
-export const eventControllerListEvents = <ThrowOnError extends boolean = false>(options: Options<EventControllerListEventsData, ThrowOnError>) => (options.client ?? client).get<EventControllerListEventsResponses, unknown, ThrowOnError>({ url: '/event/{channelId}/list', ...options });
-
-export const eventsSearchControllerSearch = <ThrowOnError extends boolean = false>(options?: Options<EventsSearchControllerSearchData, ThrowOnError>) => (options?.client ?? client).get<EventsSearchControllerSearchResponses, unknown, ThrowOnError>({ url: '/events/search', ...options });
-
-export const appsControllerGetAllApps = <ThrowOnError extends boolean = false>(options?: Options<AppsControllerGetAllAppsData, ThrowOnError>) => (options?.client ?? client).get<AppsControllerGetAllAppsResponses, unknown, ThrowOnError>({ url: '/apps', ...options });
-
-export const appsControllerCreateApp = <ThrowOnError extends boolean = false>(options: Options<AppsControllerCreateAppData, ThrowOnError>) => (options.client ?? client).post<AppsControllerCreateAppResponses, unknown, ThrowOnError>({
-    url: '/apps',
-    ...options,
-    headers: {
-        'Content-Type': 'application/json',
-        ...options.headers
-    }
-});
-
-export const appsControllerDeleteApp = <ThrowOnError extends boolean = false>(options: Options<AppsControllerDeleteAppData, ThrowOnError>) => (options.client ?? client).delete<AppsControllerDeleteAppResponses, unknown, ThrowOnError>({ url: '/apps/{id}', ...options });
-
-export const appsControllerGetApp = <ThrowOnError extends boolean = false>(options: Options<AppsControllerGetAppData, ThrowOnError>) => (options.client ?? client).get<AppsControllerGetAppResponses, unknown, ThrowOnError>({ url: '/apps/{id}', ...options });
-
-export const appsControllerEditApp = <ThrowOnError extends boolean = false>(options: Options<AppsControllerEditAppData, ThrowOnError>) => (options.client ?? client).patch<AppsControllerEditAppResponses, unknown, ThrowOnError>({
-    url: '/apps/{id}',
-    ...options,
-    headers: {
-        'Content-Type': 'application/json',
-        ...options.headers
-    }
-});
+export const traceControllerGetTraceSummary = <ThrowOnError extends boolean = false>(options: Options<TraceControllerGetTraceSummaryData, ThrowOnError>) => (options.client ?? client).get<TraceControllerGetTraceSummaryResponses, unknown, ThrowOnError>({ url: '/traces/{traceId}/summary', ...options });
 
 export const webhookControllerCreateEndpoint = <ThrowOnError extends boolean = false>(options: Options<WebhookControllerCreateEndpointData, ThrowOnError>) => (options.client ?? client).post<WebhookControllerCreateEndpointResponses, unknown, ThrowOnError>({
     url: '/webhooks/endpoints',
@@ -271,13 +317,29 @@ export const webhookControllerGetDeliveries = <ThrowOnError extends boolean = fa
 
 export const webhookControllerIngestWebhook = <ThrowOnError extends boolean = false>(options: Options<WebhookControllerIngestWebhookData, ThrowOnError>) => (options.client ?? client).post<WebhookControllerIngestWebhookResponses, unknown, ThrowOnError>({ url: '/webhooks/ingest/{endpointId}', ...options });
 
-export const traceControllerListTraces = <ThrowOnError extends boolean = false>(options?: Options<TraceControllerListTracesData, ThrowOnError>) => (options?.client ?? client).get<TraceControllerListTracesResponses, unknown, ThrowOnError>({ url: '/traces', ...options });
+export const exportControllerList = <ThrowOnError extends boolean = false>(options: Options<ExportControllerListData, ThrowOnError>) => (options.client ?? client).get<ExportControllerListResponses, unknown, ThrowOnError>({ url: '/export-destinations', ...options });
 
-export const traceControllerGetDashboardStats = <ThrowOnError extends boolean = false>(options?: Options<TraceControllerGetDashboardStatsData, ThrowOnError>) => (options?.client ?? client).get<TraceControllerGetDashboardStatsResponses, unknown, ThrowOnError>({ url: '/traces/stats', ...options });
+export const exportControllerCreate = <ThrowOnError extends boolean = false>(options: Options<ExportControllerCreateData, ThrowOnError>) => (options.client ?? client).post<ExportControllerCreateResponses, unknown, ThrowOnError>({
+    url: '/export-destinations',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
 
-export const traceControllerGetTraceEvents = <ThrowOnError extends boolean = false>(options: Options<TraceControllerGetTraceEventsData, ThrowOnError>) => (options.client ?? client).get<TraceControllerGetTraceEventsResponses, unknown, ThrowOnError>({ url: '/traces/{traceId}/events', ...options });
+export const exportControllerRemove = <ThrowOnError extends boolean = false>(options: Options<ExportControllerRemoveData, ThrowOnError>) => (options.client ?? client).delete<ExportControllerRemoveResponses, unknown, ThrowOnError>({ url: '/export-destinations/{id}', ...options });
 
-export const traceControllerGetTraceSummary = <ThrowOnError extends boolean = false>(options: Options<TraceControllerGetTraceSummaryData, ThrowOnError>) => (options.client ?? client).get<TraceControllerGetTraceSummaryResponses, unknown, ThrowOnError>({ url: '/traces/{traceId}/summary', ...options });
+export const exportControllerGet = <ThrowOnError extends boolean = false>(options: Options<ExportControllerGetData, ThrowOnError>) => (options.client ?? client).get<ExportControllerGetResponses, unknown, ThrowOnError>({ url: '/export-destinations/{id}', ...options });
+
+export const exportControllerUpdate = <ThrowOnError extends boolean = false>(options: Options<ExportControllerUpdateData, ThrowOnError>) => (options.client ?? client).patch<ExportControllerUpdateResponses, unknown, ThrowOnError>({
+    url: '/export-destinations/{id}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
 
 export const auditLogControllerListAuditLogs = <ThrowOnError extends boolean = false>(options?: Options<AuditLogControllerListAuditLogsData, ThrowOnError>) => (options?.client ?? client).get<AuditLogControllerListAuditLogsResponses, unknown, ThrowOnError>({ url: '/audit-logs', ...options });
 
@@ -344,3 +406,79 @@ export const ssoControllerCallback = <ThrowOnError extends boolean = false>(opti
 });
 
 export const ssoControllerSamlAcs = <ThrowOnError extends boolean = false>(options?: Options<SsoControllerSamlAcsData, ThrowOnError>) => (options?.client ?? client).post<SsoControllerSamlAcsResponses, unknown, ThrowOnError>({ url: '/auth/sso/acs', ...options });
+
+export const adminControllerGetOverview = <ThrowOnError extends boolean = false>(options?: Options<AdminControllerGetOverviewData, ThrowOnError>) => (options?.client ?? client).get<AdminControllerGetOverviewResponses, unknown, ThrowOnError>({ url: '/admin/overview', ...options });
+
+export const adminControllerGetSignups = <ThrowOnError extends boolean = false>(options: Options<AdminControllerGetSignupsData, ThrowOnError>) => (options.client ?? client).get<AdminControllerGetSignupsResponses, unknown, ThrowOnError>({ url: '/admin/signups', ...options });
+
+export const adminControllerGetOrgs = <ThrowOnError extends boolean = false>(options: Options<AdminControllerGetOrgsData, ThrowOnError>) => (options.client ?? client).get<AdminControllerGetOrgsResponses, unknown, ThrowOnError>({ url: '/admin/orgs', ...options });
+
+export const adminControllerCreateCustomer = <ThrowOnError extends boolean = false>(options: Options<AdminControllerCreateCustomerData, ThrowOnError>) => (options.client ?? client).post<AdminControllerCreateCustomerResponses, unknown, ThrowOnError>({
+    url: '/admin/customers',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+export const adminControllerGetOrg = <ThrowOnError extends boolean = false>(options: Options<AdminControllerGetOrgData, ThrowOnError>) => (options.client ?? client).get<AdminControllerGetOrgResponses, unknown, ThrowOnError>({ url: '/admin/orgs/{id}', ...options });
+
+export const adminControllerSetOrgPlan = <ThrowOnError extends boolean = false>(options: Options<AdminControllerSetOrgPlanData, ThrowOnError>) => (options.client ?? client).post<AdminControllerSetOrgPlanResponses, unknown, ThrowOnError>({
+    url: '/admin/orgs/{orgId}/plan',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+export const adminControllerSetOrgLimits = <ThrowOnError extends boolean = false>(options: Options<AdminControllerSetOrgLimitsData, ThrowOnError>) => (options.client ?? client).post<AdminControllerSetOrgLimitsResponses, unknown, ThrowOnError>({
+    url: '/admin/orgs/{orgId}/limits',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+export const adminControllerSetOrgStatus = <ThrowOnError extends boolean = false>(options: Options<AdminControllerSetOrgStatusData, ThrowOnError>) => (options.client ?? client).post<AdminControllerSetOrgStatusResponses, unknown, ThrowOnError>({
+    url: '/admin/orgs/{orgId}/status',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+export const adminControllerSetOrgTrial = <ThrowOnError extends boolean = false>(options: Options<AdminControllerSetOrgTrialData, ThrowOnError>) => (options.client ?? client).post<AdminControllerSetOrgTrialResponses, unknown, ThrowOnError>({
+    url: '/admin/orgs/{orgId}/trial',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+export const adminControllerSetOrgBilling = <ThrowOnError extends boolean = false>(options: Options<AdminControllerSetOrgBillingData, ThrowOnError>) => (options.client ?? client).post<AdminControllerSetOrgBillingResponses, unknown, ThrowOnError>({
+    url: '/admin/orgs/{orgId}/billing',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+export const adminControllerDisableOrg = <ThrowOnError extends boolean = false>(options: Options<AdminControllerDisableOrgData, ThrowOnError>) => (options.client ?? client).post<AdminControllerDisableOrgResponses, unknown, ThrowOnError>({ url: '/admin/orgs/{orgId}/disable', ...options });
+
+export const adminControllerEnableOrg = <ThrowOnError extends boolean = false>(options: Options<AdminControllerEnableOrgData, ThrowOnError>) => (options.client ?? client).post<AdminControllerEnableOrgResponses, unknown, ThrowOnError>({ url: '/admin/orgs/{orgId}/enable', ...options });
+
+export const adminControllerGetUsers = <ThrowOnError extends boolean = false>(options: Options<AdminControllerGetUsersData, ThrowOnError>) => (options.client ?? client).get<AdminControllerGetUsersResponses, unknown, ThrowOnError>({ url: '/admin/users', ...options });
+
+export const adminControllerDisableUser = <ThrowOnError extends boolean = false>(options: Options<AdminControllerDisableUserData, ThrowOnError>) => (options.client ?? client).post<AdminControllerDisableUserResponses, unknown, ThrowOnError>({ url: '/admin/users/{userId}/disable', ...options });
+
+export const adminControllerEnableUser = <ThrowOnError extends boolean = false>(options: Options<AdminControllerEnableUserData, ThrowOnError>) => (options.client ?? client).post<AdminControllerEnableUserResponses, unknown, ThrowOnError>({ url: '/admin/users/{userId}/enable', ...options });
+
+export const adminControllerListBillingEvents = <ThrowOnError extends boolean = false>(options: Options<AdminControllerListBillingEventsData, ThrowOnError>) => (options.client ?? client).get<AdminControllerListBillingEventsResponses, unknown, ThrowOnError>({ url: '/admin/billing-events', ...options });
+
+export const adminControllerReplayBillingEvent = <ThrowOnError extends boolean = false>(options: Options<AdminControllerReplayBillingEventData, ThrowOnError>) => (options.client ?? client).post<AdminControllerReplayBillingEventResponses, unknown, ThrowOnError>({ url: '/admin/billing-events/{id}/replay', ...options });

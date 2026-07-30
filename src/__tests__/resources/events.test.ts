@@ -86,6 +86,27 @@ describe("EventsResource.publish", () => {
     expect(body.metadata).toEqual({ tool: "search" });
   });
 
+  it("emits prompt lineage using current OpenTelemetry GenAI attribute names", async () => {
+    const { client, calls } = makeClient();
+    const r = new EventsResource(client);
+
+    await r.publish({
+      identifier: "prompt-event",
+      payload: {},
+      channelId: "ch",
+      metadata: { source: "checkout" },
+      promptId: "support-agent",
+      promptVersionId: "v7",
+    });
+
+    const body = (calls[0]?.args as { body: Record<string, unknown> }).body;
+    expect(body.metadata).toEqual({
+      source: "checkout",
+      "gen_ai.prompt.id": "support-agent",
+      "gen_ai.prompt.version": "v7",
+    });
+  });
+
   it("falls through to the client's environment when params.environment is omitted", async () => {
     const { client, calls } = makeClient("staging");
     const r = new EventsResource(client);

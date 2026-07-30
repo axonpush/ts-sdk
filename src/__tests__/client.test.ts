@@ -13,6 +13,9 @@ const ENV_KEYS = [
   "AXONPUSH_TIMEOUT",
   "AXONPUSH_MAX_RETRIES",
   "AXONPUSH_FAIL_OPEN",
+  "AXONPUSH_CONTENT_CAPTURE",
+  "AXONPUSH_REDACT_KEYS",
+  "AXONPUSH_MAX_CONTENT_LENGTH",
 ];
 
 type Saved = Record<string, string | undefined>;
@@ -57,6 +60,8 @@ describe("AxonPush facade", () => {
     expect(c.settings.failOpen).toBe(false);
     expect(c.settings.maxRetries).toBe(3);
     expect(c.settings.timeout).toBe(30_000);
+    expect(c.settings.contentCaptureMode).toBe("metadata_only");
+    expect(c.settings.maxContentLength).toBe(4_096);
     expect(c.environment).toBeUndefined();
   });
 
@@ -92,6 +97,34 @@ describe("AxonPush facade", () => {
     expect(c.settings.apiKey).toBe("ctorkey");
     expect(c.settings.baseUrl).toBe("https://from-ctor");
     expect(c.settings.failOpen).toBe(true);
+  });
+
+  it("validates content-capture environment values and redacts telemetry safely", () => {
+    process.env.AXONPUSH_CONTENT_CAPTURE = "unsafe-value";
+    const safe = new AxonPush();
+    expect(safe.settings.contentCaptureMode).toBe("metadata_only");
+    expect(
+      safe.redactTelemetry({
+        input: "private prompt",
+        authorization: "Bearer secret",
+        nested: { password: "secret", label: "safe" },
+      }),
+    ).toEqual({
+      input: "[REDACTED]",
+      authorization: "[REDACTED]",
+      nested: { password: "[REDACTED]", label: "safe" },
+    });
+
+    process.env.AXONPUSH_CONTENT_CAPTURE = "redacted";
+    process.env.AXONPUSH_REDACT_KEYS = "customerEmail";
+    process.env.AXONPUSH_MAX_CONTENT_LENGTH = "5";
+    const configured = new AxonPush();
+    expect(
+      configured.redactTelemetry({ input: "abcdef", customerEmail: "person@example.com" }),
+    ).toEqual({
+      input: "abcde…[TRUNCATED]",
+      customerEmail: "[REDACTED]",
+    });
   });
 
   it("invoke returns the unwrapped data field on success", async () => {

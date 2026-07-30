@@ -24,6 +24,9 @@ let currentSettings: ResolvedSettings = {
   timeout: 30_000,
   maxRetries: 3,
   failOpen: false,
+  contentCaptureMode: "metadata_only",
+  redactKeys: [],
+  maxContentLength: 4_096,
 };
 
 /**
@@ -64,8 +67,17 @@ async function ensureInterceptors(): Promise<void> {
     if (s.environment) request.headers.set("X-Axonpush-Environment", s.environment);
     const trace = currentTrace();
     if (trace) {
+      const spanId = trace.nextSpanId();
       request.headers.set("X-Axonpush-Trace-Id", trace.traceId);
-      request.headers.set("X-Axonpush-Span-Id", trace.nextSpanId());
+      request.headers.set("X-Axonpush-Span-Id", spanId);
+      request.headers.set("traceparent", trace.traceparent(spanId));
+      const baggage = [
+        s.orgId ? `axonpush.org_id=${encodeURIComponent(s.orgId)}` : undefined,
+        s.environment
+          ? `deployment.environment.name=${encodeURIComponent(s.environment)}`
+          : undefined,
+      ].filter(Boolean);
+      if (baggage.length > 0) request.headers.set("baggage", baggage.join(","));
     }
     return request;
   });

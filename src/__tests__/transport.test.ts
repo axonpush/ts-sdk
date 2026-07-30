@@ -60,7 +60,10 @@ describe("transport interceptors", () => {
     await invokeSync(healthControllerCheck, {}, { failOpen: false, maxRetries: 0 });
 
     expect(captured?.get("x-axonpush-trace-id")).toBe("11111111-2222-3333-4444-555555555555");
-    expect(captured?.get("x-axonpush-span-id")).toBeTruthy();
+    const spanId = captured?.get("x-axonpush-span-id");
+    expect(spanId).toMatch(/^[0-9a-f]{16}$/);
+    expect(captured?.get("traceparent")).toBe(`00-11111111222233334444555555555555-${spanId}-01`);
+    expect(captured?.get("baggage")).toContain("deployment.environment.name=production");
   });
 
   it("maps 401 to AuthenticationError with envelope fields", async () => {

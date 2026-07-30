@@ -1,6 +1,7 @@
 import { type GeneratedOp, invokeSync, setSettings } from "./_internal/transport";
 import { type AxonPushOptions, type ResolvedSettings, resolveSettings } from "./config";
 import type { RealtimeClient, RealtimeOptions } from "./realtime";
+import { redactTelemetry as applyTelemetryRedaction } from "./redaction";
 import { ApiKeysResource } from "./resources/api-keys";
 import { AppsResource } from "./resources/apps";
 import { ChannelsResource } from "./resources/channels";
@@ -59,6 +60,11 @@ export class AxonPush {
   /** The configured environment label (or `undefined` if none). */
   get environment(): string | undefined {
     return this.settings.environment;
+  }
+
+  /** Apply client-side secret/content policy before telemetry leaves the process. */
+  redactTelemetry<T>(value: T): T {
+    return applyTelemetryRedaction(value, this.settings);
   }
 
   /**

@@ -73,6 +73,53 @@ client.close();
 
 Caller-supplied options always win when defined.
 
+## Local evaluation and CI gates
+
+`axonpush-eval` runs customer evaluation code locally, against an immutable
+dataset revision, and sends only each result back to AxonPush. It never uploads
+or executes your target code on AxonPush infrastructure.
+
+```bash
+npx axonpush-eval run \
+  --dataset ds_support --revision 3 --target target_local \
+  --command 'node ./scripts/evaluate-item.mjs' \
+  --evaluator correctness@2 --concurrency 4 \
+  --minimum-score 0.9 --max-score-regression 0.02 \
+  --json artifacts/evaluation.json --junit artifacts/evaluation.xml
+```
+
+The command receives exactly one newline-delimited JSON input per dataset item
+on stdin and must print one JSON result on stdout:
+
+```json
+{"type":"axonpush.evaluation.input","experimentId":"…","item":{"id":"…","input":{"question":"…"}}}
+{"output":{"answer":"…"},"traceId":"…","totalTokens":42,"costUsd":0.003}
+```
+
+Use `--experiment <id>` to attach a local run to an already-created
+experiment. With `--target <id>`, the CLI creates the experiment and captures
+the current commit, branch, and dirty state. It queues the experiment and waits
+for the local target to enter `running` before accepting results. It runs the server release gate by
+default; use `--no-gate` only for exploratory runs. JSON, JUnit XML, and a
+GitHub Actions step summary (`$GITHUB_STEP_SUMMARY`) are emitted when their
+respective output paths are available. Exit codes are stable: `0` pass, `1`
+gate failure, `2` invalid CLI input, `3` API failure, `4` local evaluator
+failure, `130` cancellation.
+
+The same building blocks are available as a library:
+
+```ts
+import { AxonPush, HttpEvaluationApi, runLocalEvaluation } from "@axonpush/sdk";
+
+const client = new AxonPush();
+const result = await runLocalEvaluation(new HttpEvaluationApi(client.settings), {
+  datasetId: "ds_support",
+  datasetRevision: 3,
+  experimentId: "exp_123",
+  command: "node ./scripts/evaluate-item.mjs",
+});
+```
+
 ```ts
 const client = new AxonPush({
   apiKey: process.env.AXONPUSH_API_KEY,
