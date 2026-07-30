@@ -19,6 +19,30 @@ export {
   ServerError,
   ValidationError,
 } from "./errors";
+export type {
+  CreateExperimentOptions,
+  DatasetItem,
+  EvaluationApi,
+  EvaluationItemResult,
+  EvaluationRunResult,
+  GateResult,
+  GateThresholds,
+  GitLineage,
+  LocalEvaluationInput,
+  LocalEvaluationOutput,
+  LocalRunnerOptions,
+} from "./evaluation";
+// Evaluation runner — customer code remains local and communicates through JSONL.
+export {
+  captureGitLineage,
+  EvaluationApiError,
+  EXIT_CODES,
+  HttpEvaluationApi,
+  runLocalEvaluation,
+  toGitHubSummary,
+  toJsonReport,
+  toJUnitXml,
+} from "./evaluation";
 // Integrations — primitives + helpers (Stream D).
 // Framework-specific installers are reachable via
 // `@axonpush/sdk/integrations/<name>` per package.json `exports`.
@@ -115,27 +139,3 @@ export { TracesResource } from "./resources/traces";
 export { WebhooksResource } from "./resources/webhooks";
 export { currentTrace, getOrCreateTrace, TraceContext } from "./tracing";
 export { __version__ } from "./version";
-// Evaluation runner — customer code remains local and communicates through JSONL.
-export {
-  captureGitLineage,
-  EvaluationApiError,
-  EXIT_CODES,
-  HttpEvaluationApi,
-  runLocalEvaluation,
-  toGitHubSummary,
-  toJsonReport,
-  toJUnitXml,
-} from "./evaluation";
-export type {
-  CreateExperimentOptions,
-  DatasetItem,
-  EvaluationApi,
-  EvaluationItemResult,
-  EvaluationRunResult,
-  GateResult,
-  GateThresholds,
-  GitLineage,
-  LocalEvaluationInput,
-  LocalEvaluationOutput,
-  LocalRunnerOptions,
-} from "./evaluation";
