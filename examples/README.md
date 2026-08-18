@@ -1,4 +1,4 @@
-# AxonPush SDK examples
+# axonpush SDK examples
 
 Each file is runnable on its own with `bun run examples/<file>.ts`.
 The shared loader lives in `examples/config.ts`.
@@ -23,7 +23,7 @@ export AXONPUSH_ENVIRONMENT=development          # optional
 | `06-error-handling.ts` | Catch `AuthenticationError`, `NotFoundError`, `RateLimitError`, `RetryableError`. | — |
 | `07-langchain.ts` | Drive `AxonPushCallbackHandler` from a synthetic LangChain runtree. | optional `@langchain/core` |
 | `08-winston-logger.ts` | Ship winston log records as `app.log` events with severity mapping. | optional `winston`, `winston-transport` |
-| `09-sentry.ts` | Build the AxonPush DSN and call `installSentry(Sentry, opts)`. | optional `@sentry/node` |
+| `09-sentry.ts` | Build the axonpush DSN and call `installSentry(Sentry, opts)`. | optional `@sentry/node` |
 | `10-otel-export.ts` | Register `AxonPushSpanExporter` with a `BasicTracerProvider`. | optional `@opentelemetry/api`, `@opentelemetry/sdk-trace-base` |
 
 The optional peer-dep examples (07–10) detect their host library at

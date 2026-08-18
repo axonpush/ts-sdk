@@ -33,7 +33,7 @@ dashboard.
   `handleLLMStart` now propagates `langgraph_node`, `langgraph_step`,
   `langgraph_triggers`, `thread_id`, `run_type`, and `tags` from
   LangChain's trailing positional callback args into the event
-  `metadata` block, so the AxonPush UI can group/filter by graph
+  `metadata` block, so the axonpush UI can group/filter by graph
   node and tag without needing the user to wire a custom `metadata`
   at handler construction.
 - New helpers `deriveRunnableName`, `deriveModelName`, and

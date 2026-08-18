@@ -1,9 +1,9 @@
 # @axonpush/sdk
 
-TypeScript SDK for [AxonPush](https://axonpush.xyz) — real-time event
+TypeScript SDK for [axonpush](https://axonpush.xyz) — real-time event
 infrastructure for AI agent systems. ESM-only, runs on Node 20+ and Bun.
 
-- **Publish** events over a typed REST client generated from the AxonPush
+- **Publish** events over a typed REST client generated from the axonpush
   OpenAPI spec.
 - **Subscribe** in realtime over MQTT-over-WSS (AWS IoT Core), with
   presigned credentials issued by the SDK.
@@ -76,8 +76,8 @@ Caller-supplied options always win when defined.
 ## Local evaluation and CI gates
 
 `axonpush-eval` runs customer evaluation code locally, against an immutable
-dataset revision, and sends only each result back to AxonPush. It never uploads
-or executes your target code on AxonPush infrastructure.
+dataset revision, and sends only each result back to axonpush. It never uploads
+or executes your target code on axonpush infrastructure.
 
 ```bash
 npx axonpush-eval run \
@@ -177,10 +177,10 @@ import { AxonPushCallbackHandler } from "@axonpush/sdk/integrations/langchain";
 | `AxonPushMastraHooks` | Mastra agent hooks. |
 | `axonPushADKCallbacks` | Google ADK callback bundle. |
 | `AxonPushSpanExporter` | OTel `SpanExporter`. |
-| `installSentry(Sentry, opts)` | Builds the AxonPush DSN and calls `Sentry.init`. |
+| `installSentry(Sentry, opts)` | Builds the axonpush DSN and calls `Sentry.init`. |
 | `createAxonPushPinoStream` | pino transport stream. |
 | `createAxonPushWinstonTransport` | winston transport. |
-| `setupConsoleCapture` | Mirror `console.*` to AxonPush. |
+| `setupConsoleCapture` | Mirror `console.*` to axonpush. |
 | `BackgroundPublisher` | Bounded in-memory publish queue (used by transports). |
 | `BullMQPublisher` | Forward events through a BullMQ queue. |
 | `safePublish` / `truncate` / `coerceChannelId` | Building blocks for custom integrations. |
