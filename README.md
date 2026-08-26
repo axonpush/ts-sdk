@@ -1,288 +1,36 @@
 # @axonpush/sdk
 
-TypeScript SDK for [axonpush](https://axonpush.xyz) — real-time event
-infrastructure for AI agent systems. ESM-only, runs on Node 20+ and Bun.
+**This repository has moved to [axonpush/sdks](https://github.com/axonpush/sdks).**
 
-- **Publish** events over a typed REST client generated from the axonpush
-  OpenAPI spec.
-- **Subscribe** in realtime over MQTT-over-WSS (AWS IoT Core), with
-  presigned credentials issued by the SDK.
-- **Trace** multi-agent workflows via `traceId` / `parentEventId`.
-- **Integrate** with LangChain, LangGraph, LlamaIndex, OpenAI Agents,
-  Vercel AI SDK, Mastra, Google ADK, OpenTelemetry, Sentry, pino,
-  winston, console capture, BullMQ, and the Anthropic SDK.
+The TypeScript SDK now lives at
+[`packages/typescript`](https://github.com/axonpush/sdks/tree/master/packages/typescript),
+alongside the Python and .NET SDKs. All three generate from one OpenAPI
+contract produced by the backend, and CI compares their resource surfaces
+against each other so they cannot drift apart.
 
-## Install
+## Nothing changes for you
 
-```bash
+```
 npm install @axonpush/sdk
-# or
-bun add @axonpush/sdk
 ```
 
-The framework integrations live behind optional peer deps. The package
-will load fine without any of them; install the host library you want to
-wire up:
+Same package, same registry.
 
-```bash
-npm install @langchain/core         # for AxonPushCallbackHandler
-npm install winston winston-transport
-npm install pino
-npm install @opentelemetry/api @opentelemetry/sdk-trace-base
-npm install @sentry/node
-npm install bullmq
-npm install @anthropic-ai/sdk
-```
+## Where things went
 
-## Quickstart
-
-This snippet matches `examples/01-quickstart.ts` exactly.
-
-```ts
-import { AxonPush } from "@axonpush/sdk";
-
-const client = new AxonPush();
-const event = await client.events.publish({
-  identifier: `quickstart-${Date.now()}`,
-  channelId: process.env.AXONPUSH_CHANNEL_ID!,
-  eventType: "custom",
-  payload: { hello: "world", source: "examples/01-quickstart" },
-});
-console.log("published event:", event);
-client.close();
-```
-
-`new AxonPush()` resolves credentials from `AXONPUSH_*` env vars (see
-[Configuration](#configuration)). Pass an options bag to override.
-
-## Configuration
-
-| Field | Env var | Default | Notes |
-|---|---|---|---|
-| `apiKey` | `AXONPUSH_API_KEY` | — | Required. |
-| `tenantId` | `AXONPUSH_TENANT_ID` | — | Org UUID; falls back to `AXONPUSH_ORG_ID`. |
-| `orgId` | `AXONPUSH_ORG_ID` | mirrors `tenantId` | |
-| `appId` | `AXONPUSH_APP_ID` | — | Default app for resources that need one. |
-| `baseUrl` | `AXONPUSH_BASE_URL` | `http://localhost:3000` | REST API root. |
-| `environment` | `AXONPUSH_ENVIRONMENT` | — | Logical env slug (`production`, `staging`). |
-| `iotEndpoint` | `AXONPUSH_IOT_ENDPOINT` | — | AWS IoT Core MQTT-over-WSS endpoint. |
-| `wsUrl` | `AXONPUSH_WS_URL` | mirrors `iotEndpoint` | Realtime override. |
-| `timeout` | `AXONPUSH_TIMEOUT` | `30_000` | Per-request timeout (ms). |
-| `maxRetries` | `AXONPUSH_MAX_RETRIES` | `3` | Retries on `RetryableError`. |
-| `failOpen` | `AXONPUSH_FAIL_OPEN` | `false` | Swallow `APIConnectionError` and resolve `null`. |
-
-Caller-supplied options always win when defined.
-
-## Local evaluation and CI gates
-
-`axonpush-eval` runs customer evaluation code locally, against an immutable
-dataset revision, and sends only each result back to axonpush. It never uploads
-or executes your target code on axonpush infrastructure.
-
-```bash
-npx axonpush-eval run \
-  --dataset ds_support --revision 3 --target target_local \
-  --command 'node ./scripts/evaluate-item.mjs' \
-  --evaluator correctness@2 --concurrency 4 \
-  --minimum-score 0.9 --max-score-regression 0.02 \
-  --json artifacts/evaluation.json --junit artifacts/evaluation.xml
-```
-
-The command receives exactly one newline-delimited JSON input per dataset item
-on stdin and must print one JSON result on stdout:
-
-```json
-{"type":"axonpush.evaluation.input","experimentId":"…","item":{"id":"…","input":{"question":"…"}}}
-{"output":{"answer":"…"},"traceId":"…","totalTokens":42,"costUsd":0.003}
-```
-
-Use `--experiment <id>` to attach a local run to an already-created
-experiment. With `--target <id>`, the CLI creates the experiment and captures
-the current commit, branch, and dirty state. It queues the experiment and waits
-for the local target to enter `running` before accepting results. It runs the server release gate by
-default; use `--no-gate` only for exploratory runs. JSON, JUnit XML, and a
-GitHub Actions step summary (`$GITHUB_STEP_SUMMARY`) are emitted when their
-respective output paths are available. Exit codes are stable: `0` pass, `1`
-gate failure, `2` invalid CLI input, `3` API failure, `4` local evaluator
-failure, `130` cancellation.
-
-The same building blocks are available as a library:
-
-```ts
-import { AxonPush, HttpEvaluationApi, runLocalEvaluation } from "@axonpush/sdk";
-
-const client = new AxonPush();
-const result = await runLocalEvaluation(new HttpEvaluationApi(client.settings), {
-  datasetId: "ds_support",
-  datasetRevision: 3,
-  experimentId: "exp_123",
-  command: "node ./scripts/evaluate-item.mjs",
-});
-```
-
-```ts
-const client = new AxonPush({
-  apiKey: process.env.AXONPUSH_API_KEY,
-  tenantId: process.env.AXONPUSH_TENANT_ID,
-  baseUrl: "https://api.axonpush.xyz",
-  environment: "production",
-  failOpen: true,
-});
-```
-
-## Realtime in 30 seconds
-
-```ts
-import { AxonPush, RealtimeClient } from "@axonpush/sdk";
-
-const client = new AxonPush();
-const realtime = (await client.connectRealtime({ environment: "production" })) as RealtimeClient;
-await realtime.connect();
-
-await realtime.subscribe({ channelId: "ch-uuid" }, (event) => {
-  console.log(event.identifier, event.payload);
-});
-
-await client.events.publish({
-  identifier: `tick-${Date.now()}`,
-  channelId: "ch-uuid",
-  eventType: "custom",
-  payload: { hello: "from realtime" },
-});
-
-await realtime.disconnect();
-```
-
-Credentials are short-lived; the SDK pre-emptively refreshes 60 s before
-expiry with backoff `[5, 15, 30, 60] s` if the broker is flaky.
-
-## Integrations
-
-Every integration is reachable from the package root **and** as a
-sub-path import for tree-shaking:
-
-```ts
-import { AxonPushCallbackHandler } from "@axonpush/sdk";
-import { AxonPushCallbackHandler } from "@axonpush/sdk/integrations/langchain";
-```
-
-| Import | What it wires up |
+| | |
 |---|---|
-| `AxonPushCallbackHandler` | LangChain.js callback handler. |
-| `AxonPushLangGraphHandler` | LangGraph node lifecycle hook. |
-| `AxonPushLlamaIndexHandler` | LlamaIndex.ts callback. |
-| `AxonPushAnthropicTracer` | Wraps `@anthropic-ai/sdk` calls; records token usage and `streamMessage()`. |
-| `AxonPushRunHooks` | OpenAI Agents SDK lifecycle hooks. |
-| `axonPushMiddleware` | Vercel AI SDK middleware. |
-| `AxonPushMastraHooks` | Mastra agent hooks. |
-| `axonPushADKCallbacks` | Google ADK callback bundle. |
-| `AxonPushSpanExporter` | OTel `SpanExporter`. |
-| `installSentry(Sentry, opts)` | Builds the axonpush DSN and calls `Sentry.init`. |
-| `createAxonPushPinoStream` | pino transport stream. |
-| `createAxonPushWinstonTransport` | winston transport. |
-| `setupConsoleCapture` | Mirror `console.*` to axonpush. |
-| `BackgroundPublisher` | Bounded in-memory publish queue (used by transports). |
-| `BullMQPublisher` | Forward events through a BullMQ queue. |
-| `safePublish` / `truncate` / `coerceChannelId` | Building blocks for custom integrations. |
+| Source | [`axonpush/sdks` → `packages/typescript`](https://github.com/axonpush/sdks/tree/master/packages/typescript) |
+| Issues and pull requests | [axonpush/sdks/issues](https://github.com/axonpush/sdks/issues) |
+| Releases | tagged `sdk-ts-v*` in the new repository |
 
-Each integration accepts the same `IntegrationConfig`:
+## About this repository
 
-```ts
-{ client, channelId, agentId?, traceId?, mode?, queueSize?, overflowPolicy?, shutdownTimeoutMs?, concurrency?, bullmqOptions? }
-```
+It is archived and read-only.
 
-`mode` is `"background"` (default), `"sync"`, or `"bullmq"`.
-
-## Errors
-
-```ts
-import {
-  AxonPushError,
-  AuthenticationError,
-  NotFoundError,
-  RateLimitError,
-  RetryableError,
-  ValidationError,
-} from "@axonpush/sdk";
-
-try {
-  await client.apps.get(id);
-} catch (err) {
-  if (err instanceof RateLimitError) {
-    await new Promise((r) => setTimeout(r, (err.retryAfter ?? 1) * 1000));
-  } else if (err instanceof AuthenticationError) {
-    rotateApiKey();
-  } else if (err instanceof RetryableError) {
-    // safe to retry with your own backoff
-  } else if (err instanceof NotFoundError || err instanceof ValidationError) {
-    throw err; // not retryable
-  }
-}
-```
-
-The SDK already retries `RetryableError` with backoff
-`[250, 500, 1000, 2000, 4000] ms` (honouring `Retry-After`) up to
-`maxRetries` times — handle these in your code only when you need a
-custom policy.
-
-## Tracing
-
-```ts
-import { getOrCreateTrace } from "@axonpush/sdk";
-
-const trace = getOrCreateTrace();
-await client.events.publish({
-  identifier: "plan",
-  channelId,
-  traceId: trace.traceId,
-  eventType: "agent.start",
-  payload: { goal: "..." },
-});
-```
-
-`traceId` is propagated as `X-Axonpush-Trace-Id` and stored on every
-event, so the UI can stitch agent runs across services. Pass
-`parentEventId` to model hand-offs between agents.
-
-## Migration: 0.0.4 → 0.0.5
-
-- **All IDs are `string` UUIDs.** `numeric` ids are gone from the public
-  boundary; integrations still accept `number` for `channelId` with a
-  one-time `console.warn` and migrate it for you.
-- **No more `connectWebSocket` / `WebSocketClient`.** Use
-  `connectRealtime()` and `RealtimeClient`.
-- **`channels.subscribe()` SSE shim is removed.** Subscribe via
-  realtime.
-- **`events.list()` returns `EventListResponseDto`** (`{ data, meta }`),
-  not a bare array. Read `.data` for the events.
-- **Models live in flat re-exports.** Import `App`, `Channel`, `Event`,
-  `EventType`, etc. from `@axonpush/sdk` directly.
-- **Zero-arg constructor.** `new AxonPush()` reads `AXONPUSH_*` env
-  vars; the explicit options bag is optional.
-
-See [`CHANGELOG.md`](./CHANGELOG.md) for the full list, including the
-new exception envelope and the audit improvements that landed alongside
-the rewrite.
-
-## Examples
-
-Ten runnable examples covering quickstart, tracing, realtime, multi-
-agent fan-out, webhooks, error handling, and every framework integration
-live in [`examples/`](./examples). Each one is a single file you can run
-with `bun run examples/<name>.ts`.
-
-## Advanced topics
-
-For the full v0.0.5 contract — public surface, ID rules, transport
-chokepoint, exception envelope, generated layer ownership — see
-[`SHARED-CONTRACT.md`](./SHARED-CONTRACT.md).
-
-## License
-
-MIT.
-
-## Contributing
-
-Issues and PRs welcome at [github.com/axonpush/ts-sdk](https://github.com/axonpush/ts-sdk).
-Please run `bun run lint && bun run typecheck && bun run test` before
-sending a PR.
+History came across with `git filter-repo`, so
+`git log packages/typescript/src/client.ts` in the new repository still reaches
+the original first commit. The `v*` tags stay here as the provenance for the
+npm releases published from them; the new repository namespaces its tags
+`sdk-ts-v*`, because `v0.0.6` meant three different things across the SDKs that
+were merged.
